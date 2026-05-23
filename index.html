@@ -13,6 +13,9 @@
     <main class="container">
       <section class="card">
         <h1>Generator Catatan Pencairan</h1>
+        <p class="subtitle">
+  Klik output untuk langsung copy.
+</p>
 
         <div class="field">
           <label for="jenis">Jenis</label>
@@ -22,8 +25,6 @@
             <option value="Biaya Operasional">
               Biaya Operasional
             </option>
-            <option value="Biaya Gas">Biaya Gas</option>
-            <option value="Biaya Gas">Biaya Gas</option>
             <option value="Biaya Gas">Biaya Gas</option>
           </select>
         </div>
@@ -43,11 +44,34 @@
             rows="3"
           ></textarea>
         </div>
-
-        <button id="copyBtn">
-          Copy
-        </button>
       </section>
+
+      <section class="card">
+  <h1>Konversi Nominal</h1>
+<p class="subtitle">
+  Tempel nominal lalu klik hasil untuk copy.
+</p>
+  <div class="field">
+    <label for="nominalInput">Input</label>
+
+    <textarea
+      id="nominalInput"
+      rows="3"
+      placeholder="Contoh: Rp 10.577.000,-"
+    ></textarea>
+  </div>
+
+  <div class="field">
+    <label for="nominalOutput">Hasil</label>
+
+    <textarea
+      id="nominalOutput"
+      rows="3"
+      readonly
+    ></textarea>
+  </div>
+</section>
+
     </main>
 
     <script src="script.js"></script>
