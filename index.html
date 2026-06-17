@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
   <head>
     <link rel="icon" type="image/png" href="favicon.png" />
@@ -11,18 +11,42 @@
 
   <body>
     <main class="container">
+      <!-- Konversi Nominal -->
       <section class="card">
-        <h1>Generator Catatan Pencairan</h1>
-        <p class="subtitle">
-  Klik output untuk langsung copy.
-</p>
+        <h1>Konversi Angka</h1>
+        <p class="subtitle">Klik hasil untuk copy.</p>
+
+        <div class="field">
+          <label for="nominalInput">Input</label>
+
+          <textarea
+            id="nominalInput"
+            rows="3"
+            placeholder="Contoh: Rp 10.577.000,-"
+          ></textarea>
+        </div>
+
+        <div class="field">
+          <label for="nominalOutput">Hasil</label>
+
+          <div class="copy-wrapper">
+            <textarea id="nominalOutput" rows="2" readonly></textarea>
+            <span class="copy-badge">Copied</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Generator Catatan -->
+      <section class="card">
+        <h1>Maker Generator</h1>
+        <p class="subtitle">Klik output untuk copy.</p>
 
         <div class="field">
           <label for="jenis">Jenis</label>
 
           <select id="jenis">
             <option value="Belanja Bahan Baku">Belanja Bahan Baku</option>
-            <option value="Biaya Ops">Biaya Ops</option>
+            <option value="Biaya Ops Harian">Biaya Ops Harian</option>
             <option value="Belanja Gas">Belanja Gas</option>
           </select>
         </div>
@@ -36,40 +60,40 @@
         <div class="field">
           <label for="output">Output</label>
 
-          <textarea
-            id="output"
-            readonly
-            rows="3"
-          ></textarea>
+          <div class="copy-wrapper">
+            <textarea id="output" readonly rows="3"></textarea>
+            <span class="copy-badge">Copied</span>
+          </div>
         </div>
       </section>
 
-      <section class="card">
-  <h1>Konversi Nominal</h1>
-<p class="subtitle">
-  Tempel nominal lalu klik hasil untuk copy.
-</p>
-  <div class="field">
-    <label for="nominalInput">Input</label>
+      <!-- Generator Pencairan -->
+      <section class="card card--pencairan">
+        <h1>Request Generator</h1>
+        <p class="subtitle">Tambah beberapa request sekaligus.</p>
 
-    <textarea
-      id="nominalInput"
-      rows="3"
-      placeholder="Contoh: Rp 10.577.000,-"
-    ></textarea>
-  </div>
+        <div class="field">
+          <label for="pencDapur">Nama Dapur</label>
+          <select id="pencDapur"></select>
+        </div>
 
-  <div class="field">
-    <label for="nominalOutput">Hasil</label>
+        <div class="field">
+          <label for="pencTanggal">Tanggal</label>
+          <input type="date" id="pencTanggal" />
+        </div>
 
-    <textarea
-      id="nominalOutput"
-      rows="3"
-      readonly
-    ></textarea>
-  </div>
-</section>
+        <div id="pencRows" class="penc-rows"></div>
 
+        <button class="btn-add" id="pencAddRow">+ Tambah Baris</button>
+
+        <div class="field" style="margin-top: 18px">
+          <label>Output</label>
+          <div class="copy-wrapper">
+            <textarea id="pencOutput" readonly rows="6"></textarea>
+            <span class="copy-badge">Copied</span>
+          </div>
+        </div>
+      </section>
     </main>
 
     <script src="script.js"></script>
