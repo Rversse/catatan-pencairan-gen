@@ -52,6 +52,7 @@ function getSelectedBahanText() {
 
 const outputEl = document.getElementById('output')
 const outputTanggalEl = document.getElementById('outputTanggal')
+const outputGabunganEl = document.getElementById('outputGabungan')
 
 const nominalInputEl = document.getElementById('nominalInput')
 
@@ -115,6 +116,7 @@ function updateOutput() {
   if (!tanggal) {
     outputEl.value = ''
     outputTanggalEl.value = ''
+    outputGabunganEl.value = ''
     return
   }
 
@@ -126,8 +128,11 @@ function updateOutput() {
     label = `Belanja Bahan Baku ${bahanText}`
   }
 
+  const tanggalNumeric = formatTanggalNumeric(tanggalEl.value)
+
   outputEl.value = `${label},`
-  outputTanggalEl.value = formatTanggalNumeric(tanggalEl.value)
+  outputTanggalEl.value = tanggalNumeric
+  outputGabunganEl.value = `${label}, ${tanggalNumeric}`
 }
 
 function resetBahan() {
@@ -215,6 +220,10 @@ outputTanggalEl.addEventListener('click', () => {
   copyText(outputTanggalEl)
 })
 
+outputGabunganEl.addEventListener('click', () => {
+  copyText(outputGabunganEl)
+})
+
 nominalOutputEl.addEventListener('click', () => {
   copyText(nominalOutputEl)
 })
@@ -234,23 +243,25 @@ function flashCopied(textarea) {
 }
 
 // Lock output fields
-;[outputEl, outputTanggalEl, nominalOutputEl].forEach((el) => {
-  if (!el) return
+;[outputEl, outputTanggalEl, outputGabunganEl, nominalOutputEl].forEach(
+  (el) => {
+    if (!el) return
 
-  el.setAttribute('tabindex', '-1')
+    el.setAttribute('tabindex', '-1')
 
-  el.addEventListener('mousedown', (e) => {
-    e.preventDefault()
-  })
+    el.addEventListener('mousedown', (e) => {
+      e.preventDefault()
+    })
 
-  el.addEventListener('selectstart', (e) => {
-    e.preventDefault()
-  })
+    el.addEventListener('selectstart', (e) => {
+      e.preventDefault()
+    })
 
-  el.addEventListener('dblclick', (e) => {
-    e.preventDefault()
-  })
-})
+    el.addEventListener('dblclick', (e) => {
+      e.preventDefault()
+    })
+  }
+)
 
 tanggalEl.addEventListener('click', () => {
   if (typeof tanggalEl.showPicker === 'function') {

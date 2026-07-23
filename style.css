@@ -265,6 +265,27 @@ textarea[readonly]::selection {
   margin-top: 8px;
 }
 
+.card-wide {
+  max-width: 980px;
+}
+
+.split {
+  display: flex;
+  gap: 24px;
+}
+
+.split .col {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .split {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
 @media (max-width: 480px) {
   body {
     padding: 14px;

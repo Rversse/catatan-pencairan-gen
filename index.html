@@ -11,73 +11,84 @@
 
   <body>
     <main class="container">
-      <!-- Konversi Nominal -->
-      <section class="card">
-        <h1>Konversi Angka</h1>
-        <p class="subtitle">Klik hasil untuk copy.</p>
-
-        <div class="field">
-          <label for="nominalInput">Input</label>
-
-          <textarea
-            id="nominalInput"
-            rows="3"
-            placeholder="Contoh: Rp 10.577.000,-"
-          ></textarea>
-        </div>
-
-        <div class="field">
-          <label for="nominalOutput">Hasil</label>
-
-          <div class="copy-wrapper">
-            <textarea id="nominalOutput" rows="2" readonly></textarea>
-            <span class="copy-badge">Copied</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Generator Catatan -->
-      <section class="card">
+      <!-- Maker Generator -->
+      <section class="card card-wide">
         <h1>Maker Generator</h1>
-        <p class="subtitle">Klik output untuk copy.</p>
+        <p class="subtitle">Klik hasil/output untuk copy.</p>
 
-        <div class="field">
-          <label for="jenis">Jenis</label>
+        <div class="split">
+          <div class="col">
+            <div class="field">
+              <label for="nominalInput">Input Nominal</label>
 
-          <select id="jenis">
-            <option value="Belanja Bahan Baku">Belanja</option>
-            <option value="Biaya Ops Harian">Biaya Ops Harian</option>
-            <option value="Belanja Gas">Belanja Gas</option>
-          </select>
-        </div>
+              <textarea
+                id="nominalInput"
+                rows="3"
+                placeholder="Contoh: Rp 10.577.000,-"
+              ></textarea>
+            </div>
 
-        <div class="field" id="bahanField">
-          <label>Bahan Baku</label>
+            <div class="field">
+              <label for="nominalOutput">Hasil</label>
 
-          <div class="bahan-grid" id="bahanGrid"></div>
-        </div>
-
-        <div class="field">
-          <label for="tanggal">Tanggal</label>
-
-          <input type="date" id="tanggal" />
-        </div>
-
-        <div class="field">
-          <label for="output">Output</label>
-
-          <div class="copy-wrapper">
-            <textarea id="output" readonly rows="2"></textarea>
-            <span class="copy-badge">Copied</span>
+              <div class="copy-wrapper">
+                <textarea id="nominalOutput" rows="2" readonly></textarea>
+                <span class="copy-badge">Copied</span>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div class="field">
-          <label for="outputTanggal">Output Tanggal</label>
+          <div class="col">
+            <div class="field">
+              <label for="tanggal">Tanggal</label>
 
-          <div class="copy-wrapper">
-            <textarea id="outputTanggal" readonly rows="1"></textarea>
-            <span class="copy-badge">Copied</span>
+              <input type="date" id="tanggal" />
+            </div>
+
+            <div class="field">
+              <label for="jenis">Jenis</label>
+
+              <select id="jenis">
+                <option value="Belanja Bahan Baku">Belanja</option>
+                <option value="Biaya Ops Harian">Biaya Ops Harian</option>
+                <option value="Belanja Gas">Belanja Gas</option>
+              </select>
+            </div>
+
+            <div class="field" id="bahanField">
+              <label>Bahan Baku</label>
+
+              <div class="bahan-grid" id="bahanGrid"></div>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="field">
+              <label for="output">Output</label>
+
+              <div class="copy-wrapper">
+                <textarea id="output" readonly rows="2"></textarea>
+                <span class="copy-badge">Copied</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="outputTanggal">Output Tanggal</label>
+
+              <div class="copy-wrapper">
+                <textarea id="outputTanggal" readonly rows="1"></textarea>
+                <span class="copy-badge">Copied</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="outputGabungan">Output Gabungan</label>
+
+              <div class="copy-wrapper">
+                <textarea id="outputGabungan" readonly rows="2"></textarea>
+                <span class="copy-badge">Copied</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
