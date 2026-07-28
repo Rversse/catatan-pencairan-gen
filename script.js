@@ -4,22 +4,22 @@ const bahanGridEl = document.getElementById('bahanGrid')
 const tanggalEl = document.getElementById('tanggal')
 
 const BAHAN_LIST = [
-  'Minyak',
-  'Susu',
-  'Bumbu',
-  'Beras',
-  'Ayam Potong',
-  'Ayam Parting',
   'Ayam Fillet',
+  'Ayam Parting',
+  'Ayam Potong',
+  'Beras',
+  'Buah',
+  'Bumbu',
   'Daging Sapi',
   'Ikan',
+  'Minyak',
   'Sayur',
-  'Buah',
+  'Susu',
   'Tahu',
-  'Tempe',
+  'Telur Asin',
   'Telur Ayam',
   'Telur Puyuh',
-  'Telur Asin'
+  'Tempe'
 ]
 
 const selectedBahan = new Set()
@@ -213,7 +213,10 @@ tanggalEl.addEventListener('change', updateOutput)
 nominalInputEl.addEventListener('input', updateNominalOutput)
 
 outputEl.addEventListener('click', () => {
-  copyText(outputEl)
+  copyText(outputEl, () => {
+    resetBahan()
+    updateOutput()
+  })
 })
 
 outputTanggalEl.addEventListener('click', () => {
@@ -221,7 +224,10 @@ outputTanggalEl.addEventListener('click', () => {
 })
 
 outputGabunganEl.addEventListener('click', () => {
-  copyText(outputGabunganEl)
+  copyText(outputGabunganEl, () => {
+    resetBahan()
+    updateOutput()
+  })
 })
 
 nominalOutputEl.addEventListener('click', () => {
