@@ -1,5 +1,3 @@
-const jenisEl = document.getElementById('jenis')
-const bahanFieldEl = document.getElementById('bahanField')
 const bahanGridEl = document.getElementById('bahanGrid')
 const tanggalEl = document.getElementById('tanggal')
 
@@ -10,6 +8,7 @@ const BAHAN_LIST = [
   'Beras',
   'Buah',
   'Bumbu',
+  'Daging Ayam',
   'Daging Sapi',
   'Ikan',
   'Minyak',
@@ -50,9 +49,9 @@ function getSelectedBahanText() {
   return [...selectedBahan].join(', ')
 }
 
-const outputEl = document.getElementById('output')
-const outputTanggalEl = document.getElementById('outputTanggal')
-const outputGabunganEl = document.getElementById('outputGabungan')
+const outputBelanjaEl = document.getElementById('outputBelanja')
+const outputOperasionalEl = document.getElementById('outputOperasional')
+const outputGasEl = document.getElementById('outputGas')
 
 const nominalInputEl = document.getElementById('nominalInput')
 
@@ -102,37 +101,25 @@ function formatTanggalNumeric(dateString) {
   return `${day}-${month}-${year}`
 }
 
-function updateBahanVisibility() {
-  const isBelanja = jenisEl.value === 'Belanja Bahan Baku'
-
-  bahanFieldEl.style.display = isBelanja ? '' : 'none'
-}
-
 function updateOutput() {
-  const jenis = jenisEl.value
-
   const tanggal = formatTanggal(tanggalEl.value)
 
   if (!tanggal) {
-    outputEl.value = ''
-    outputTanggalEl.value = ''
-    outputGabunganEl.value = ''
+    outputBelanjaEl.value = ''
+    outputOperasionalEl.value = ''
+    outputGasEl.value = ''
     return
-  }
-
-  let label = jenis
-
-  const bahanText = getSelectedBahanText()
-
-  if (jenis === 'Belanja Bahan Baku' && bahanText) {
-    label = `Belanja Bahan Baku ${bahanText}`
   }
 
   const tanggalNumeric = formatTanggalNumeric(tanggalEl.value)
 
-  outputEl.value = `${label},`
-  outputTanggalEl.value = tanggalNumeric
-  outputGabunganEl.value = `${label}, ${tanggalNumeric}`
+  const bahanText = getSelectedBahanText()
+
+  const belanjaLabel = bahanText ? `Belanja ${bahanText}` : 'Belanja'
+
+  outputBelanjaEl.value = `${belanjaLabel}, ${tanggalNumeric}`
+  outputOperasionalEl.value = `Biaya Ops Harian, ${tanggalNumeric}`
+  outputGasEl.value = `Pembayaran Gas, ${tanggalNumeric}`
 }
 
 function resetBahan() {
@@ -199,35 +186,23 @@ async function copyText(textarea, onSuccess) {
   }
 }
 
-jenisEl.addEventListener('change', () => {
-  if (jenisEl.value !== 'Belanja Bahan Baku') {
-    resetBahan()
-  }
-
-  updateBahanVisibility()
-  updateOutput()
-})
-
 tanggalEl.addEventListener('change', updateOutput)
 
 nominalInputEl.addEventListener('input', updateNominalOutput)
 
-outputEl.addEventListener('click', () => {
-  copyText(outputEl, () => {
+outputBelanjaEl.addEventListener('click', () => {
+  copyText(outputBelanjaEl, () => {
     resetBahan()
     updateOutput()
   })
 })
 
-outputTanggalEl.addEventListener('click', () => {
-  copyText(outputTanggalEl)
+outputOperasionalEl.addEventListener('click', () => {
+  copyText(outputOperasionalEl)
 })
 
-outputGabunganEl.addEventListener('click', () => {
-  copyText(outputGabunganEl, () => {
-    resetBahan()
-    updateOutput()
-  })
+outputGasEl.addEventListener('click', () => {
+  copyText(outputGasEl)
 })
 
 nominalOutputEl.addEventListener('click', () => {
@@ -235,8 +210,6 @@ nominalOutputEl.addEventListener('click', () => {
 })
 
 setTodayDate()
-
-updateBahanVisibility()
 
 updateOutput()
 
@@ -249,7 +222,7 @@ function flashCopied(textarea) {
 }
 
 // Lock output fields
-;[outputEl, outputTanggalEl, outputGabunganEl, nominalOutputEl].forEach(
+;[outputBelanjaEl, outputOperasionalEl, outputGasEl, nominalOutputEl].forEach(
   (el) => {
     if (!el) return
 
