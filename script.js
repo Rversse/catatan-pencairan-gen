@@ -115,7 +115,7 @@ function updateOutput() {
 
   const bahanText = getSelectedBahanText()
 
-  const belanjaLabel = bahanText ? `Belanja ${bahanText}` : 'Belanja'
+  const belanjaLabel = bahanText ? `Belanja ${bahanText}` : 'Belanja Bahan Baku'
 
   outputBelanjaEl.value = `${belanjaLabel}, ${tanggalNumeric}`
   outputOperasionalEl.value = `Biaya Ops Harian, ${tanggalNumeric}`
