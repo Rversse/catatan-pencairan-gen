@@ -2,22 +2,16 @@ const bahanGridEl = document.getElementById('bahanGrid')
 const tanggalEl = document.getElementById('tanggal')
 
 const BAHAN_LIST = [
-  'Ayam Fillet',
-  'Ayam Parting',
-  'Ayam Potong',
   'Beras',
   'Buah',
   'Bumbu',
   'Daging Ayam',
   'Daging Sapi',
-  'Ikan',
   'Minyak',
   'Sayur',
   'Susu',
   'Tahu',
-  'Telur Asin',
   'Telur Ayam',
-  'Telur Puyuh',
   'Tempe'
 ]
 
@@ -91,14 +85,34 @@ function formatTanggal(dateString) {
   }).format(date)
 }
 
+const BULAN_SINGKAT = {
+  '01': 'Jan',
+  '02': 'Feb',
+  '03': 'Mar',
+  '04': 'Apr',
+  '05': 'Mei',
+  '06': 'Jun',
+  '07': 'Jul',
+  '08': 'Agu',
+  '09': 'Sep',
+  10: 'Okt',
+  11: 'Nov',
+  12: 'Des'
+}
+
 function formatTanggalNumeric(dateString) {
   if (!dateString) {
     return ''
   }
 
+  // DD-MM-YYYY dulu, lalu MM ditukar ke singkatan bulan via regex
   const [year, month, day] = dateString.split('-')
+  const tanggalNumeric = `${day}-${month}-${year}`
 
-  return `${day}-${month}-${year}`
+  return tanggalNumeric.replace(
+    /-(\d{2})-/,
+    (match, mm) => `-${BULAN_SINGKAT[mm]}-`
+  )
 }
 
 function updateOutput() {
@@ -206,7 +220,10 @@ outputGasEl.addEventListener('click', () => {
 })
 
 nominalOutputEl.addEventListener('click', () => {
-  copyText(nominalOutputEl)
+  copyText(nominalOutputEl, () => {
+    nominalInputEl.value = ''
+    updateNominalOutput()
+  })
 })
 
 setTodayDate()
