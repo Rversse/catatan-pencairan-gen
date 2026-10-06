@@ -46,6 +46,12 @@ function getSelectedBahanText() {
 const outputBelanjaEl = document.getElementById('outputBelanja')
 const outputOperasionalEl = document.getElementById('outputOperasional')
 const outputGasEl = document.getElementById('outputGas')
+const outputInsentifFasilitasEl = document.getElementById('outputInsentifFasilitas')
+const outputSewaKendaraanEl = document.getElementById('outputSewaKendaraan')
+const outputGajiRelawanEl = document.getElementById('outputGajiRelawan')
+const outputInsentifPicSekolahEl = document.getElementById('outputInsentifPicSekolah')
+const outputInsentifPicKaderEl = document.getElementById('outputInsentifPicKader')
+const outputTanggalEl = document.getElementById('outputTanggal')
 
 const nominalInputEl = document.getElementById('nominalInput')
 
@@ -71,20 +77,6 @@ function setTodayDate() {
   tanggalEl.value = `${year}-${month}-${day}`
 }
 
-function formatTanggal(dateString) {
-  if (!dateString) {
-    return ''
-  }
-
-  const date = new Date(dateString)
-
-  return new Intl.DateTimeFormat('id-ID', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  }).format(date)
-}
-
 const BULAN_SINGKAT = {
   '01': 'Jan',
   '02': 'Feb',
@@ -105,7 +97,6 @@ function formatTanggalNumeric(dateString) {
     return ''
   }
 
-  // DD-MM-YYYY dulu, lalu MM ditukar ke singkatan bulan via regex
   const [year, month, day] = dateString.split('-')
   const tanggalNumeric = `${day}-${month}-${year}`
 
@@ -116,17 +107,21 @@ function formatTanggalNumeric(dateString) {
 }
 
 function updateOutput() {
-  const tanggal = formatTanggal(tanggalEl.value)
-
-  if (!tanggal) {
+  if (!tanggalEl.value) {
     outputBelanjaEl.value = ''
     outputOperasionalEl.value = ''
     outputGasEl.value = ''
+    outputInsentifFasilitasEl.value = ''
+    outputSewaKendaraanEl.value = ''
+    outputGajiRelawanEl.value = ''
+    outputInsentifPicSekolahEl.value = ''
+    outputInsentifPicKaderEl.value = ''
+    outputTanggalEl.value = ''
+    nominalOutputEl.value = ''
     return
   }
 
   const tanggalNumeric = formatTanggalNumeric(tanggalEl.value)
-
   const bahanText = getSelectedBahanText()
 
   const belanjaLabel = bahanText ? `Belanja ${bahanText}` : 'Belanja Bahan Baku'
@@ -134,6 +129,12 @@ function updateOutput() {
   outputBelanjaEl.value = `${belanjaLabel}, ${tanggalNumeric}`
   outputOperasionalEl.value = `Biaya Ops Harian, ${tanggalNumeric}`
   outputGasEl.value = `Pembayaran Gas, ${tanggalNumeric}`
+  outputInsentifFasilitasEl.value = `Insentif Fasilitas SPPG, ${tanggalNumeric}`
+  outputSewaKendaraanEl.value = `Sewa Kendaraan, ${tanggalNumeric}`
+  outputGajiRelawanEl.value = `Gaji Relawan, ${tanggalNumeric}`
+  outputInsentifPicSekolahEl.value = `Insentif PIC Sekolah, ${tanggalNumeric}`
+  outputInsentifPicKaderEl.value = `Insentif PIC Kader, ${tanggalNumeric}`
+  outputTanggalEl.value = tanggalNumeric
 }
 
 function resetBahan() {
@@ -219,6 +220,30 @@ outputGasEl.addEventListener('click', () => {
   copyText(outputGasEl)
 })
 
+outputInsentifFasilitasEl.addEventListener('click', () => {
+  copyText(outputInsentifFasilitasEl)
+})
+
+outputSewaKendaraanEl.addEventListener('click', () => {
+  copyText(outputSewaKendaraanEl)
+})
+
+outputGajiRelawanEl.addEventListener('click', () => {
+  copyText(outputGajiRelawanEl)
+})
+
+outputInsentifPicSekolahEl.addEventListener('click', () => {
+  copyText(outputInsentifPicSekolahEl)
+})
+
+outputInsentifPicKaderEl.addEventListener('click', () => {
+  copyText(outputInsentifPicKaderEl)
+})
+
+outputTanggalEl.addEventListener('click', () => {
+  copyText(outputTanggalEl)
+})
+
 nominalOutputEl.addEventListener('click', () => {
   copyText(nominalOutputEl, () => {
     nominalInputEl.value = ''
@@ -239,25 +264,34 @@ function flashCopied(textarea) {
 }
 
 // Lock output fields
-;[outputBelanjaEl, outputOperasionalEl, outputGasEl, nominalOutputEl].forEach(
-  (el) => {
-    if (!el) return
+;[
+  outputBelanjaEl,
+  outputOperasionalEl,
+  outputGasEl,
+  outputInsentifFasilitasEl,
+  outputSewaKendaraanEl,
+  outputGajiRelawanEl,
+  outputInsentifPicSekolahEl,
+  outputInsentifPicKaderEl,
+  outputTanggalEl,
+  nominalOutputEl
+].forEach((el) => {
+  if (!el) return
 
-    el.setAttribute('tabindex', '-1')
+  el.setAttribute('tabindex', '-1')
 
-    el.addEventListener('mousedown', (e) => {
-      e.preventDefault()
-    })
+  el.addEventListener('mousedown', (e) => {
+    e.preventDefault()
+  })
 
-    el.addEventListener('selectstart', (e) => {
-      e.preventDefault()
-    })
+  el.addEventListener('selectstart', (e) => {
+    e.preventDefault()
+  })
 
-    el.addEventListener('dblclick', (e) => {
-      e.preventDefault()
-    })
-  }
-)
+  el.addEventListener('dblclick', (e) => {
+    e.preventDefault()
+  })
+})
 
 tanggalEl.addEventListener('click', () => {
   if (typeof tanggalEl.showPicker === 'function') {
