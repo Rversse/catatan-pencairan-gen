@@ -128,7 +128,7 @@ function updateOutput() {
 
   outputBelanjaEl.value = `${belanjaLabel}, ${tanggalNumeric}`
   outputOperasionalEl.value = `Biaya Ops Harian, ${tanggalNumeric}`
-  outputGasEl.value = `Pembayaran Gas, ${tanggalNumeric}`
+  outputGasEl.value = `Pembelian Gas, ${tanggalNumeric}`
   outputInsentifFasilitasEl.value = `Insentif Fasilitas SPPG, ${tanggalNumeric}`
   outputSewaKendaraanEl.value = `Sewa Kendaraan, ${tanggalNumeric}`
   outputGajiRelawanEl.value = `Gaji Relawan, ${tanggalNumeric}`
