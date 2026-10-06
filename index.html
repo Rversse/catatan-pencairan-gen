@@ -19,6 +19,30 @@
         <div class="split">
           <div class="col">
             <div class="field">
+              <label for="tanggal">Tanggal</label>
+
+              <input type="date" id="tanggal" />
+            </div>
+
+            <div class="field" id="bahanField">
+              <label>Bahan Baku</label>
+
+              <div class="bahan-grid" id="bahanGrid"></div>
+            </div>
+
+            <div class="field">
+              <label for="nominalInput">Input Nominal</label>
+
+              <textarea
+                id="nominalInput"
+                rows="3"
+                placeholder="Contoh: Rp 10.577.000,-"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="field">
               <label for="outputBelanja">Output Belanja</label>
 
               <div class="copy-wrapper">
@@ -44,31 +68,59 @@
                 <span class="copy-badge">Copied</span>
               </div>
             </div>
-          </div>
 
-          <div class="col">
             <div class="field">
-              <label for="tanggal">Tanggal</label>
+              <label for="outputInsentifFasilitas">Insentif Fasilitas SPPG</label>
 
-              <input type="date" id="tanggal" />
+              <div class="copy-wrapper">
+                <textarea id="outputInsentifFasilitas" readonly rows="1"></textarea>
+                <span class="copy-badge">Copied</span>
+              </div>
             </div>
 
-            <div class="field" id="bahanField">
-              <label>Bahan Baku</label>
-
-              <div class="bahan-grid" id="bahanGrid"></div>
-            </div>
-          </div>
-
-          <div class="col">
             <div class="field">
-              <label for="nominalInput">Input Nominal</label>
+              <label for="outputSewaKendaraan">Sewa Kendaraan</label>
 
-              <textarea
-                id="nominalInput"
-                rows="3"
-                placeholder="Contoh: Rp 10.577.000,-"
-              ></textarea>
+              <div class="copy-wrapper">
+                <textarea id="outputSewaKendaraan" readonly rows="1"></textarea>
+                <span class="copy-badge">Copied</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="outputGajiRelawan">Gaji Relawan</label>
+
+              <div class="copy-wrapper">
+                <textarea id="outputGajiRelawan" readonly rows="1"></textarea>
+                <span class="copy-badge">Copied</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="outputInsentifPicSekolah">Insentif PIC Sekolah</label>
+
+              <div class="copy-wrapper">
+                <textarea id="outputInsentifPicSekolah" readonly rows="1"></textarea>
+                <span class="copy-badge">Copied</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="outputInsentifPicKader">Insentif PIC Kader</label>
+
+              <div class="copy-wrapper">
+                <textarea id="outputInsentifPicKader" readonly rows="1"></textarea>
+                <span class="copy-badge">Copied</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="outputTanggal">Tanggal</label>
+
+              <div class="copy-wrapper">
+                <textarea id="outputTanggal" readonly rows="1"></textarea>
+                <span class="copy-badge">Copied</span>
+              </div>
             </div>
 
             <div class="field">
