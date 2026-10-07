@@ -1,5 +1,6 @@
 const bahanGridEl = document.getElementById('bahanGrid')
 const tanggalEl = document.getElementById('tanggal')
+const tanggalSpasiEl = document.getElementById('tanggalSpasi')
 
 const BAHAN_LIST = [
   'Beras',
@@ -98,11 +99,12 @@ function formatTanggalNumeric(dateString) {
   }
 
   const [year, month, day] = dateString.split('-')
-  const tanggalNumeric = `${day}-${month}-${year}`
+  const separator = tanggalSpasiEl.checked ? ' ' : '-'
+  const tanggalNumeric = `${day}${separator}${month}${separator}${year}`
 
   return tanggalNumeric.replace(
-    /-(\d{2})-/,
-    (match, mm) => `-${BULAN_SINGKAT[mm]}-`
+    new RegExp(`\\${separator}(\\d{2})\\${separator}`),
+    (match, mm) => `${separator}${BULAN_SINGKAT[mm]}${separator}`
   )
 }
 
@@ -202,6 +204,8 @@ async function copyText(textarea, onSuccess) {
 }
 
 tanggalEl.addEventListener('change', updateOutput)
+
+tanggalSpasiEl.addEventListener('change', updateOutput)
 
 nominalInputEl.addEventListener('input', updateNominalOutput)
 
