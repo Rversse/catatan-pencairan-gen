@@ -50,7 +50,7 @@ const outputInsentifFasilitasEl = document.getElementById('outputInsentifFasilit
 const outputSewaKendaraanEl = document.getElementById('outputSewaKendaraan')
 const outputGajiRelawanEl = document.getElementById('outputGajiRelawan')
 const outputInsentifPicSekolahEl = document.getElementById('outputInsentifPicSekolah')
-const outputInsentifPicKaderEl = document.getElementById('outputInsentifPicKader')
+const outputInsentifPicPosyanduEl = document.getElementById('outputInsentifPicPosyandu')
 const outputTanggalEl = document.getElementById('outputTanggal')
 
 const nominalInputEl = document.getElementById('nominalInput')
@@ -115,7 +115,7 @@ function updateOutput() {
     outputSewaKendaraanEl.value = ''
     outputGajiRelawanEl.value = ''
     outputInsentifPicSekolahEl.value = ''
-    outputInsentifPicKaderEl.value = ''
+    outputInsentifPicPosyanduEl.value = ''
     outputTanggalEl.value = ''
     nominalOutputEl.value = ''
     return
@@ -133,7 +133,7 @@ function updateOutput() {
   outputSewaKendaraanEl.value = `Sewa Kendaraan, ${tanggalNumeric}`
   outputGajiRelawanEl.value = `Gaji Relawan, ${tanggalNumeric}`
   outputInsentifPicSekolahEl.value = `Insentif PIC Sekolah, ${tanggalNumeric}`
-  outputInsentifPicKaderEl.value = `Insentif PIC Kader, ${tanggalNumeric}`
+  outputInsentifPicPosyanduEl.value = `Insentif PIC Posyandu, ${tanggalNumeric}`
   outputTanggalEl.value = tanggalNumeric
 }
 
@@ -236,8 +236,8 @@ outputInsentifPicSekolahEl.addEventListener('click', () => {
   copyText(outputInsentifPicSekolahEl)
 })
 
-outputInsentifPicKaderEl.addEventListener('click', () => {
-  copyText(outputInsentifPicKaderEl)
+outputInsentifPicPosyanduEl.addEventListener('click', () => {
+  copyText(outputInsentifPicPosyanduEl)
 })
 
 outputTanggalEl.addEventListener('click', () => {
@@ -272,7 +272,7 @@ function flashCopied(textarea) {
   outputSewaKendaraanEl,
   outputGajiRelawanEl,
   outputInsentifPicSekolahEl,
-  outputInsentifPicKaderEl,
+  outputInsentifPicPosyanduEl,
   outputTanggalEl,
   nominalOutputEl
 ].forEach((el) => {
