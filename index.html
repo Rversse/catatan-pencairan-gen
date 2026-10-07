@@ -17,40 +17,7 @@
         <p class="subtitle">Klik hasil/output untuk copy.</p>
 
         <div class="split">
-          <div class="col">
-            <div class="field">
-              <label for="tanggal">Tanggal</label>
-
-              <input type="date" id="tanggal" />
-            </div>
-
-            <div class="field" id="bahanField">
-              <label>Bahan Baku</label>
-
-              <div class="bahan-grid" id="bahanGrid"></div>
-            </div>
-
-            <div class="field">
-              <label for="nominalInput">Input Nominal</label>
-
-              <textarea
-                id="nominalInput"
-                rows="1"
-                placeholder="Contoh: Rp 10.577.000,-"
-              ></textarea>
-            </div>
-
-            <div class="field">
-              <label for="nominalOutput">Hasil Output Nominal</label>
-
-              <div class="copy-wrapper">
-                <textarea id="nominalOutput" rows="1" readonly></textarea>
-                <span class="copy-badge">Copied</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col">
+          <div class="col col-output">
             <div class="field">
               <label for="outputBelanja">Output Belanja</label>
 
@@ -110,6 +77,39 @@
 
               <div class="copy-wrapper">
                 <textarea id="outputInsentifPicSekolah" readonly rows="1"></textarea>
+                <span class="copy-badge">Copied</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="col col-input">
+            <div class="field">
+              <label for="tanggal">Tanggal</label>
+
+              <input type="date" id="tanggal" />
+            </div>
+
+            <div class="field">
+              <label>Bahan Baku</label>
+
+              <div class="bahan-grid" id="bahanGrid"></div>
+            </div>
+
+            <div class="field">
+              <label for="nominalInput">Input Nominal</label>
+
+              <textarea
+                id="nominalInput"
+                rows="1"
+                placeholder="Contoh: Rp 10.577.000,-"
+              ></textarea>
+            </div>
+
+            <div class="field">
+              <label for="nominalOutput">Hasil Output Nominal</label>
+
+              <div class="copy-wrapper">
+                <textarea id="nominalOutput" rows="1" readonly></textarea>
                 <span class="copy-badge">Copied</span>
               </div>
             </div>
