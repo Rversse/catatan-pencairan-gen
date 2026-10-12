@@ -318,10 +318,28 @@ textarea[readonly]::selection {
   min-width: 0;
 }
 
+/* Desktop: place generated outputs on the left and inputs on the right. */
+.col-output {
+  order: 1;
+}
+
+.col-input {
+  order: 2;
+}
+
 @media (max-width: 860px) {
   .split {
     flex-direction: column;
     gap: 0;
+  }
+
+  /* Keep the input-first flow on narrow screens, where columns stack. */
+  .col-input {
+    order: 1;
+  }
+
+  .col-output {
+    order: 2;
   }
 }
 
