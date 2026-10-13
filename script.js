@@ -41,7 +41,17 @@ BAHAN_LIST.forEach((nama) => {
 })
 
 function getSelectedBahanText() {
-  return [...selectedBahan].join(', ')
+  const bahan = [...selectedBahan]
+
+  if (bahan.length <= 1) {
+    return bahan[0] ?? ''
+  }
+
+  if (bahan.length === 2) {
+    return `${bahan[0]} dan ${bahan[1]}`
+  }
+
+  return `${bahan.slice(0, -1).join(', ')}, dan ${bahan[bahan.length - 1]}`
 }
 
 const outputBelanjaEl = document.getElementById('outputBelanja')
