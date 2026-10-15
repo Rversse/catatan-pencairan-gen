@@ -146,6 +146,38 @@
     .ignored-panel h3 { margin:0 0 7px; font-size:12px; color:#89530a; }
     .ignored-panel ul { margin:0; padding-left:20px; color:#785e35; font:11px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap:anywhere; }
     footer { padding-top:28px; text-align:center; color:#7a8598; font-size:11px; }
+    /* Compact layout: three short descriptions plus one amount field. */
+    .payment-card { padding:12px; border-radius:13px; }
+    .card-top { gap:9px; }
+    .number { flex-basis:32px; height:32px; border-radius:9px; }
+    .card-category { font-size:14px; }
+    .card-context { font-size:11px; margin-top:2px; }
+    .fields { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin-top:11px; }
+    .field-group { min-width:0; }
+    .field-label {
+      display:flex; align-items:center; gap:5px; margin-bottom:4px;
+      font-size:10px; font-weight:800; color:#67728a; letter-spacing:0;
+      text-transform:none;
+    }
+    .description-count { margin-left:auto; flex:0 0 auto; color:#8a94a7; font-size:9px; font-weight:650; }
+    .field-entry { display:flex; align-items:stretch; gap:4px; min-width:0; }
+    .description-input, .amount-input {
+      display:block; width:100%; min-width:0; height:37px; min-height:37px;
+      border:1px solid #cfd7e5; border-radius:8px; background:#fff; color:var(--text);
+      padding:8px 9px; font-size:12px; line-height:1.2; outline:none;
+      transition:border-color .15s, box-shadow .15s;
+    }
+    .description-input { resize:none; }
+    .amount-input { font-size:15px !important; font-weight:850; letter-spacing:0; font-variant-numeric:tabular-nums; }
+    .description-input:focus, .amount-input:focus { border-color:#6c7bea; box-shadow:0 0 0 2px rgba(72,91,221,.12); }
+    .btn-copy-small {
+      display:inline-flex; flex:0 0 34px; align-items:center; justify-content:center;
+      width:34px; height:37px; padding:0; border:1px solid #d8def1;
+      border-radius:8px; color:#394ba9; background:#f7f8ff; font-size:14px; font-weight:900;
+    }
+    .btn-copy-small:hover:not(:disabled) { background:#edf0ff; border-color:#b7c2f5; }
+    .completion-row { margin-top:10px; padding-top:9px; gap:8px; }
+    @media (max-width:900px) { .fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     @media (max-width:620px) {
       .topbar { padding:14px 0; }
       .topbar-inner, main { width:min(100% - 22px, 940px); }
@@ -153,7 +185,7 @@
       .panel { padding:14px; border-radius:15px; }
       .panel-heading { flex-direction:column; }
       .local-pill { align-self:flex-start; }
-      .fields { grid-template-columns:minmax(0,1fr); }
+      .fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
       .amount-input { font-size:18px !important; }
       .payment-card { padding:13px; }
       .card-top { gap:9px; }
@@ -180,7 +212,7 @@
     <section class="intro">
       <div class="eyebrow">Maker → Catatan</div>
       <h1>Decode pencairan, satu card per baris.</h1>
-      <p>Paste hasil output dari Maker-Pencairan. Deskripsi dan nominal dipisah otomatis supaya bisa disalin satu per satu. Centang transaksi yang sudah dieksekusi untuk melacak progres.</p>
+      <p>Paste hasil output dari Maker-Pencairan. Setiap card menyediakan tiga field deskripsi (maksimal 40 karakter per field) dan nominal yang bisa disalin terpisah. Urutan transaksi tetap mengikuti output Maker.</p>
     </section>
 
     <section class="panel" aria-labelledby="inputHeading">
@@ -221,7 +253,7 @@
       <div class="empty-state" id="emptyState">
         <div class="empty-icon">↳</div>
         <strong>Belum ada pencairan untuk ditampilkan</strong>
-        <p>Masukkan hasil Maker-Pencairan dan tekan Decode. Setiap baris transaksi akan menjadi card bernomor dengan field deskripsi, nominal, tombol Copy, dan checklist eksekusi.</p>
+        <p>Masukkan hasil Maker-Pencairan dan tekan Decode. Setiap transaksi menjadi card ringkas berisi tiga field deskripsi, nominal, tombol Copy, dan checklist eksekusi.</p>
       </div>
       <div class="ignored-panel" id="ignoredPanel" hidden>
         <h3>Baris yang tidak dikenali sebagai transaksi</h3>
@@ -239,14 +271,19 @@
       'Koperasi Arutala, 15-Okt-2026',
       'Gaji Relawan : Budi Santoso - BNI / 1234567890 · 1.200.000',
       'GAS : PT Gas Nusantara - BNI / 9876543210 · 500.000',
-      'RAB : CV Pangan Sejahtera - BRI / 1122334455 · Sayur, Buah · 2.350.000',
+      'RAB : CV Bahan Pokok - BRI / 1122334455 · 2.350.000',
+      'RAB : CV Pangan Sejahtera - BRI / 1122334455 · Minyak, Roti, Bumbu · 850.000',
       'Ops Harian : Yayasan Arutala - BNI / 333444555 · 750.000',
+      'Lain-lain : Biaya Transport Relawan - Yayasan Arutala - BNI / 444555666 · 300.000',
       '',
       '_OPS Real_ · 1.200.000',
       '',
       'Dapur Melati, 16-Okt-2026',
       'Sewa Kendaraan Mobil (01-Okt-2026 – 31-Okt-2026) : Nama Akun - BRI / 123456789 · 900.000',
-      'Insentif PIC Sekolah : Yayasan Melati - BNI / 555666777 · 650.000'
+      'Insentif PIC Sekolah : Yayasan Melati - BNI / 555666777 · 650.000',
+      '',
+      'Campakamulya, 17-Okt-2026',
+      'Gaji Relawan, Insentif PIC Sekolah, Insentif PIC Posyandu : Yayasan Campakamulya - BNI / 777888999 · 3.450.000'
     ].join('\n');
 
     const sourceInput = document.getElementById('sourceInput');
@@ -288,16 +325,148 @@
       return value ? value.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
     }
 
-    function getCategory(description) {
-      if (/^_OPS Real_$/i.test(description)) return { label: 'OPS Real', real: true };
-      if (/^GAS\s*:/i.test(description)) return { label: 'GAS', real: false };
-      if (/^RAB\s*:/i.test(description)) return { label: 'RAB', real: false };
-      if (/^Sewa SPPG\s*:/i.test(description)) return { label: 'Sewa SPPG', real: false };
-      if (/^Sewa Kendaraan\b/i.test(description)) return { label: 'Sewa Kendaraan', real: false };
-      if (/^Ops Harian\s*:/i.test(description)) return { label: 'Ops Harian', real: false };
-      if (/^Lain-lain\s*:/i.test(description)) return { label: 'Lain-lain', real: false };
-      const match = description.match(/^([^:]{1,60})\s*:/);
-      return { label: match ? match[1].trim() : 'Pembayaran', real: false };
+    const MAX_DESCRIPTION_LENGTH = 40;
+    const PAYROLL_KINDS = [
+      'Gaji Relawan',
+      'Insentif PIC Sekolah',
+      'Insentif PIC Posyandu'
+    ];
+
+    function joinNatural(items) {
+      const values = items.filter(Boolean);
+      if (values.length <= 1) return values[0] || '';
+      if (values.length === 2) return values[0] + ' dan ' + values[1];
+      return values.slice(0, -1).join(', ') + ' dan ' + values[values.length - 1];
+    }
+
+    function splitTextAtLimit(text, limit) {
+      const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+      const chunks = [];
+      let current = '';
+      words.forEach(function (word) {
+        if (word.length > limit) {
+          if (current) { chunks.push(current); current = ''; }
+          for (let index = 0; index < word.length; index += limit) {
+            chunks.push(word.slice(index, index + limit));
+          }
+          return;
+        }
+        const candidate = current ? current + ' ' + word : word;
+        if (candidate.length > limit) {
+          chunks.push(current);
+          current = word;
+        } else {
+          current = candidate;
+        }
+      });
+      if (current) chunks.push(current);
+      return chunks;
+    }
+
+    function hasUsableDate(date) {
+      return Boolean(date && date !== 'Tanggal tidak terdeteksi');
+    }
+
+    function buildDescriptionFields(label, date) {
+      const cleanLabel = String(label || '').trim();
+      const dateText = hasUsableDate(date) ? String(date).trim() : '';
+      if (!dateText) return [cleanLabel, '', ''];
+
+      const combined = cleanLabel + ', ' + dateText;
+      if (combined.length <= MAX_DESCRIPTION_LENGTH) return [combined, '', ''];
+      if (cleanLabel.length <= MAX_DESCRIPTION_LENGTH) return [cleanLabel, dateText, ''];
+
+      // For unusually long item lists, keep each field within 40 characters
+      // and reserve the final field for the date.
+      const chunks = splitTextAtLimit(cleanLabel, MAX_DESCRIPTION_LENGTH);
+      return [chunks[0] || '', chunks[1] || '', dateText];
+    }
+
+    function extractOtherDescription(rawDescription) {
+      let value = rawDescription.replace(/^Lain-lain\s*:\s*/i, '').trim();
+      value = value.replace(/\s-\s[A-Z][A-Z0-9 ]*\s\/\s[^\s]+$/i, '').trim();
+      const ownerSeparator = value.lastIndexOf(' - ');
+      if (ownerSeparator >= 0) value = value.slice(0, ownerSeparator).trim();
+      return value || 'Lain-lain';
+    }
+
+    function describeTransaction(rawDescription, kitchen, date) {
+      const source = String(rawDescription || '').trim();
+      const normalizedKitchen = String(kitchen || '').trim().toLocaleLowerCase('id-ID');
+
+      if (/^_OPS Real_$/i.test(source)) {
+        const label = 'Realisasi Ops Harian';
+        return { category: label, isReal: true, descriptions: buildDescriptionFields(label, date) };
+      }
+
+      if (/^RAB\s*:/i.test(source)) {
+        const segments = source.split(' · ');
+        const productText = segments.length > 1 ? segments.slice(1).join(' · ').trim() : '';
+        const products = productText
+          ? productText.split(',').map(function (item) { return item.trim(); }).filter(Boolean)
+          : [];
+        const label = products.length
+          ? 'Pembayaran ' + joinNatural(products)
+          : 'Pembayaran Bahan Baku';
+        return { category: label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+      }
+
+      if (/^GAS\s*:/i.test(source)) {
+        const label = 'Pembayaran Gas';
+        return { category: label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+      }
+
+      if (/^Ops Harian\s*:/i.test(source)) {
+        const label = 'Pembayaran Ops Harian';
+        return { category: label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+      }
+
+      if (/^Sewa SPPG\s*:/i.test(source)) {
+        const label = 'Sewa SPPG';
+        return { category: label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+      }
+
+      if (/^Sewa Kendaraan\b/i.test(source)) {
+        const label = 'Sewa Kendaraan';
+        return { category: label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+      }
+
+      if (/^Lain-lain\s*:/i.test(source)) {
+        const label = extractOtherDescription(source);
+        return { category: label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+      }
+
+      const colonIndex = source.indexOf(':');
+      const prefix = colonIndex >= 0 ? source.slice(0, colonIndex).trim() : '';
+      const listedPrefixKinds = prefix.split(/\s*,\s*/).filter(Boolean);
+      const kinds = PAYROLL_KINDS.filter(function (kind) {
+        return listedPrefixKinds.includes(kind);
+      });
+
+      if (kinds.length > 0) {
+        if (normalizedKitchen === 'campakamulya' && PAYROLL_KINDS.every(function (kind) {
+          return kinds.includes(kind);
+        })) {
+          return {
+            category: 'Gaji dan Insentif (Gabungan)',
+            isReal: false,
+            descriptions: PAYROLL_KINDS.map(function (kind) {
+              const full = kind + (hasUsableDate(date) ? ', ' + date : '');
+              return full.length <= MAX_DESCRIPTION_LENGTH ? full : kind;
+            })
+          };
+        }
+
+        const label = joinNatural(kinds);
+        return { category: label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+      }
+
+      const fallbackLabel = prefix || 'Pembayaran';
+      return {
+        category: fallbackLabel,
+        isReal: false,
+        descriptions: buildDescriptionFields(fallbackLabel, date)
+      };
     }
 
     function parseOutput(source) {
@@ -324,9 +493,9 @@
           return;
         }
 
-        const description = line.slice(0, separatorIndex).trim();
+        const rawDescription = line.slice(0, separatorIndex).trim();
         const amountText = line.slice(separatorIndex + 3).trim();
-        if (!description || !/^\d[\d.,\s]*$/.test(amountText)) {
+        if (!rawDescription || !/^\d[\d.,\s]*$/.test(amountText)) {
           skipped.push({ lineNo: index + 1, text: line, reason: 'Deskripsi atau format nominal tidak dikenali.' });
           return;
         }
@@ -337,17 +506,21 @@
           return;
         }
 
-        const category = getCategory(description);
+        const details = describeTransaction(rawDescription, kitchen, date);
         const cardId = 'line-' + (index + 1);
         const edit = edits[cardId] || {};
+        const descriptions = Array.isArray(edit.descriptions)
+          ? [edit.descriptions[0] || '', edit.descriptions[1] || '', edit.descriptions[2] || '']
+          : details.descriptions.slice(0, 3);
+
         parsedCards.push({
           id: cardId,
           sourceLineNo: index + 1,
           kitchen: kitchen,
           date: date,
-          category: category.label,
-          isReal: category.real,
-          description: Object.prototype.hasOwnProperty.call(edit, 'description') ? edit.description : description,
+          category: details.category,
+          isReal: details.isReal,
+          descriptions: descriptions,
           amount: Object.prototype.hasOwnProperty.call(edit, 'amount') ? digitsOnly(edit.amount) : amount
         });
       });
@@ -396,6 +569,21 @@
     function renderCards() {
       cardsEl.innerHTML = cards.map(function (card, index) {
         const done = completedIds.has(card.id);
+        const descriptionFields = card.descriptions.map(function (value, descriptionIndex) {
+          const fieldId = 'desc-' + card.id + '-' + descriptionIndex;
+          const charCount = String(value || '').length;
+          return '<div class="field-group">' +
+            '<label class="field-label" for="' + escapeHtml(fieldId) + '">' +
+              'Deskripsi ' + (descriptionIndex + 1) +
+              '<span class="description-count" data-count-index="' + descriptionIndex + '">' + charCount + '/40</span>' +
+            '</label>' +
+            '<div class="field-entry">' +
+              '<input class="description-input" id="' + escapeHtml(fieldId) + '" data-role="description" data-description-index="' + descriptionIndex + '" type="text" maxlength="40" autocomplete="off" spellcheck="false" value="' + escapeHtml(value || '') + '">' +
+              '<button class="btn-copy-small" type="button" data-action="copy-description" data-description-index="' + descriptionIndex + '" aria-label="Copy Deskripsi ' + (descriptionIndex + 1) + '" title="Copy Deskripsi ' + (descriptionIndex + 1) + '">▣</button>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+
         return '<article class="payment-card' + (done ? ' is-done' : '') + '" data-card-id="' + escapeHtml(card.id) + '">' +
           '<div class="card-top">' +
             '<div class="number">' + String(index + 1).padStart(2, '0') + '</div>' +
@@ -406,16 +594,15 @@
             '</div>' +
             '<span class="status-pill">' + (done ? 'Sudah dieksekusi' : 'Belum dieksekusi') + '</span>' +
           '</div>' +
-          '<div class="fields">' +
-            '<div><label class="field-label" for="desc-' + escapeHtml(card.id) + '">Deskripsi</label>' +
-              '<textarea class="description-input" id="desc-' + escapeHtml(card.id) + '" data-role="description" spellcheck="false">' + escapeHtml(card.description) + '</textarea>' +
-              '<button class="btn btn-copy field-action" type="button" data-action="copy-description">▣ Copy Deskripsi</button></div>' +
-            '<div><label class="field-label" for="amount-' + escapeHtml(card.id) + '">Nominal (angka)</label>' +
-              '<input class="amount-input" id="amount-' + escapeHtml(card.id) + '" data-role="amount" type="text" inputmode="numeric" autocomplete="off" value="' + escapeHtml(formatAmount(card.amount)) + '">' +
-              '<button class="btn btn-copy field-action" type="button" data-action="copy-amount">▣ Copy Nominal</button>' +
+          '<div class="fields">' + descriptionFields +
+            '<div class="field-group"><label class="field-label" for="amount-' + escapeHtml(card.id) + '">Nominal</label>' +
+              '<div class="field-entry">' +
+                '<input class="amount-input" id="amount-' + escapeHtml(card.id) + '" data-role="amount" type="text" inputmode="numeric" autocomplete="off" value="' + escapeHtml(formatAmount(card.amount)) + '">' +
+                '<button class="btn-copy-small" type="button" data-action="copy-amount" aria-label="Copy Nominal" title="Copy Nominal">▣</button>' +
+              '</div>' +
             '</div>' +
           '</div>' +
-          (card.isReal ? '<div class="real-note">Catatan realisasi OPS — bukan instruksi transfer rekening. Nominal tetap bisa disalin tanpa titik.</div>' : '') +
+          (card.isReal ? '<div class="real-note">Catatan realisasi operasional — bukan instruksi transfer rekening. Nominal tetap bisa disalin tanpa titik.</div>' : '') +
           '<div class="completion-row">' +
             '<label class="check-label"><input type="checkbox" data-action="toggle" ' + (done ? 'checked' : '') + '><span>Tandai sudah dieksekusi</span></label>' +
             '<span class="completed-note">✓ Progres tersimpan di browser ini</span>' +
@@ -482,10 +669,14 @@
           if (!copied) throw new Error('Clipboard unavailable');
         }
         const oldText = button.textContent;
-        button.textContent = '✓ Tersalin';
+        const oldLabel = button.getAttribute('aria-label');
+        button.textContent = '✓';
+        button.setAttribute('aria-label', 'Tersalin');
         button.classList.add('copied');
         window.setTimeout(function () {
           button.textContent = oldText;
+          if (oldLabel === null) button.removeAttribute('aria-label');
+          else button.setAttribute('aria-label', oldLabel);
           button.classList.remove('copied');
         }, 1100);
       } catch (error) {
@@ -536,12 +727,15 @@
       if (!card) return;
 
       if (target.dataset.role === 'description') {
-        card.description = target.value;
-        edits[card.id] = { description: card.description, amount: card.amount };
+        const descriptionIndex = Number(target.dataset.descriptionIndex);
+        card.descriptions[descriptionIndex] = target.value;
+        const count = target.closest('.field-group')?.querySelector('.description-count');
+        if (count) count.textContent = target.value.length + '/40';
+        edits[card.id] = { descriptions: card.descriptions.slice(), amount: card.amount };
         persistWorkspace();
       } else if (target.dataset.role === 'amount') {
         card.amount = digitsOnly(target.value);
-        edits[card.id] = { description: card.description, amount: card.amount };
+        edits[card.id] = { descriptions: card.descriptions.slice(), amount: card.amount };
         persistWorkspace();
       }
     });
@@ -568,7 +762,7 @@
       if (target.dataset.role === 'amount') {
         card.amount = digitsOnly(target.value);
         target.value = formatAmount(card.amount);
-        edits[card.id] = { description: card.description, amount: card.amount };
+        edits[card.id] = { descriptions: card.descriptions.slice(), amount: card.amount };
         persistWorkspace();
       }
     });
@@ -582,8 +776,9 @@
       if (!card) return;
 
       if (button.dataset.action === 'copy-description') {
-        const field = cardEl.querySelector('[data-role="description"]');
-        void copyToClipboard(field.value, button);
+        const descriptionIndex = Number(button.dataset.descriptionIndex);
+        const field = cardEl.querySelector('[data-role="description"][data-description-index="' + descriptionIndex + '"]');
+        if (field) void copyToClipboard(field.value, button);
       } else if (button.dataset.action === 'copy-amount') {
         const field = cardEl.querySelector('[data-role="amount"]');
         const amountDigits = digitsOnly(field.value);
