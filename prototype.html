@@ -490,6 +490,11 @@
         }
 
         const rawDescription = line.slice(0, separatorIndex).trim();
+
+        // OPS Real is a realization note, not a payment to record in Catatan Pencairan.
+        // Skip silently: no card and no "ignored line" warning.
+        if (/^_?OPS(?:\s*\/\s*|\s+)Real_?$/i.test(rawDescription)) return;
+
         const amountText = line.slice(separatorIndex + 3).trim();
         if (!rawDescription || !/^\d[\d.,\s]*$/.test(amountText)) {
           skipped.push({ lineNo: index + 1, text: line, reason: 'Deskripsi atau format nominal tidak dikenali.' });
