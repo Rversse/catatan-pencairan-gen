@@ -55,7 +55,7 @@ function getSelectedBahanText() {
 }
 
 const outputPembayaranEl = document.getElementById('outputPembayaran')
-const outputOperasionalEl = document.getElementById('outputOperasional')
+const outputPembayaranOpsHarianEl = document.getElementById('outputPembayaranOpsHarian')
 const outputPembayaranGasEl = document.getElementById('outputPembayaranGas')
 const outputInsentifFasilitasEl = document.getElementById('outputInsentifFasilitas')
 const outputSewaKendaraanEl = document.getElementById('outputSewaKendaraan')
@@ -121,7 +121,7 @@ function formatTanggalNumeric(dateString) {
 function updateOutput() {
   if (!tanggalEl.value) {
     outputPembayaranEl.value = ''
-    outputOperasionalEl.value = ''
+    outputPembayaranOpsHarianEl.value = ''
     outputPembayaranGasEl.value = ''
     outputInsentifFasilitasEl.value = ''
     outputSewaKendaraanEl.value = ''
@@ -139,7 +139,7 @@ function updateOutput() {
   const pembayaranLabel = bahanText ? `Pembayaran ${bahanText}` : 'Pembayaran Bahan Baku'
 
   outputPembayaranEl.value = `${pembayaranLabel}, ${tanggalNumeric}`
-  outputOperasionalEl.value = `Biaya Ops Harian, ${tanggalNumeric}`
+  outputPembayaranOpsHarianEl.value = `Pembayaran Ops Harian, ${tanggalNumeric}`
   outputPembayaranGasEl.value = `Pembayaran Gas, ${tanggalNumeric}`
   outputInsentifFasilitasEl.value = `Insentif Fasilitas SPPG, ${tanggalNumeric}`
   outputSewaKendaraanEl.value = `Sewa Kendaraan, ${tanggalNumeric}`
@@ -226,8 +226,8 @@ outputPembayaranEl.addEventListener('click', () => {
   })
 })
 
-outputOperasionalEl.addEventListener('click', () => {
-  copyText(outputOperasionalEl)
+outputPembayaranOpsHarianEl.addEventListener('click', () => {
+  copyText(outputPembayaranOpsHarianEl)
 })
 
 outputPembayaranGasEl.addEventListener('click', () => {
@@ -280,7 +280,7 @@ function flashCopied(textarea) {
 // Lock output fields
 ;[
   outputPembayaranEl,
-  outputOperasionalEl,
+  outputPembayaranOpsHarianEl,
   outputPembayaranGasEl,
   outputInsentifFasilitasEl,
   outputSewaKendaraanEl,
