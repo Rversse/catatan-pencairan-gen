@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0b1220">
-  <title>Catatan Pencairan — Prototype Decoder</title>
+  <title>Catatan Pencairan Maker</title>
   <style>
     :root {
       color-scheme: light;
@@ -41,18 +41,14 @@
       padding: 18px 22px;
       border-bottom: 1px solid #25314a;
     }
-    .topbar-inner, main { width: min(100% - 32px, 940px); margin: 0 auto; }
+    .topbar-inner, main { width: min(100% - 28px, 860px); margin: 0 auto; }
     .brand { display:flex; align-items:center; gap:12px; font-weight:800; letter-spacing:.01em; }
     .brand-mark {
       display:grid; place-items:center; width:36px; height:36px; border-radius:11px;
       color:#fff; background:#485bdd; font-size:17px;
     }
     .brand small { display:block; color:#aeb9d0; font-size:12px; font-weight:500; letter-spacing:.03em; margin-top:1px; }
-    main { padding: 28px 0 56px; }
-    .intro { margin-bottom:22px; }
-    .eyebrow { color:var(--brand); font-size:11px; font-weight:850; letter-spacing:.13em; text-transform:uppercase; }
-    h1 { margin:7px 0 8px; font-size:clamp(25px,4vw,34px); line-height:1.12; letter-spacing:-.035em; }
-    .intro p { color:var(--muted); max-width:710px; margin:0; font-size:14px; }
+    main { padding: 18px 0 36px; }
     .panel {
       background:var(--surface); border:1px solid var(--line); border-radius:18px;
       padding:20px; box-shadow:var(--shadow); margin-bottom:20px;
@@ -146,51 +142,53 @@
     .ignored-panel h3 { margin:0 0 7px; font-size:12px; color:#89530a; }
     .ignored-panel ul { margin:0; padding-left:20px; color:#785e35; font:11px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap:anywhere; }
     footer { padding-top:28px; text-align:center; color:#7a8598; font-size:11px; }
-    /* Compact layout: three short descriptions plus one amount field. */
-    .payment-card { padding:12px; border-radius:13px; }
-    .card-top { gap:9px; }
-    .number { flex-basis:32px; height:32px; border-radius:9px; }
-    .card-category { font-size:14px; }
-    .card-context { font-size:11px; margin-top:2px; }
-    .fields { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:9px; margin-top:11px; }
+    /* Compact click-to-copy layout. */
+    .panel { padding:16px; border-radius:15px; }
+    .panel-heading { margin-bottom:10px; }
+    .payment-card { padding:11px; border-radius:12px; }
+    .card-top { display:grid; grid-template-columns:32px minmax(0,1fr) auto; align-items:center; gap:9px; }
+    .number { width:32px; height:32px; border-radius:9px; }
+    .card-head { text-align:center; }
+    .card-name-row { justify-content:center; }
+    .card-category { font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:.025em; text-align:center; }
+    .card-context { font-size:10px; margin-top:2px; text-align:center; }
+    .kind-pill { display:none !important; }
+    .fields { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:10px; }
     .field-group { min-width:0; }
     .field-label {
-      display:flex; align-items:center; gap:5px; margin-bottom:4px;
+      display:flex; align-items:center; gap:4px; margin-bottom:4px;
       font-size:10px; font-weight:800; color:#67728a; letter-spacing:0;
       text-transform:none;
     }
     .description-count { margin-left:auto; flex:0 0 auto; color:#8a94a7; font-size:9px; font-weight:650; }
-    .field-entry { display:flex; align-items:stretch; gap:4px; min-width:0; }
+    .field-entry { min-width:0; }
     .description-input, .amount-input {
-      display:block; width:100%; min-width:0; height:37px; min-height:37px;
+      display:block; width:100%; min-width:0; height:36px; min-height:36px;
       border:1px solid #cfd7e5; border-radius:8px; background:#fff; color:var(--text);
-      padding:8px 9px; font-size:12px; line-height:1.2; outline:none;
-      transition:border-color .15s, box-shadow .15s;
+      padding:8px 9px; font-size:11px; line-height:1.2; outline:none;
+      transition:border-color .15s, box-shadow .15s, background-color .15s;
     }
-    .description-input { resize:none; }
-    .amount-input { font-size:15px !important; font-weight:850; letter-spacing:0; font-variant-numeric:tabular-nums; }
+    .description-input, .amount-input { cursor:text; }
+    .amount-input { font-size:14px !important; font-weight:850; letter-spacing:0; font-variant-numeric:tabular-nums; }
     .description-input:focus, .amount-input:focus { border-color:#6c7bea; box-shadow:0 0 0 2px rgba(72,91,221,.12); }
-    .btn-copy-small {
-      display:inline-flex; flex:0 0 34px; align-items:center; justify-content:center;
-      width:34px; height:37px; padding:0; border:1px solid #d8def1;
-      border-radius:8px; color:#394ba9; background:#f7f8ff; font-size:14px; font-weight:900;
+    .description-input.copied-field, .amount-input.copied-field {
+      border-color:#20a464; background:#f6fff9;
+      box-shadow:0 0 0 2px rgba(32,164,100,.18), 0 0 12px rgba(32,164,100,.24);
     }
-    .btn-copy-small:hover:not(:disabled) { background:#edf0ff; border-color:#b7c2f5; }
-    .completion-row { margin-top:10px; padding-top:9px; gap:8px; }
+    #sourceInput { height:150px; min-height:150px; max-height:150px; resize:none; overflow:auto; }
+    .completion-row { margin-top:9px; padding-top:8px; gap:8px; }
+    .stats { margin:18px 0 11px; }
+    .cards { gap:10px; }
     @media (max-width:900px) { .fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     @media (max-width:620px) {
-      .topbar { padding:14px 0; }
-      .topbar-inner, main { width:min(100% - 22px, 940px); }
-      main { padding-top:21px; }
-      .panel { padding:14px; border-radius:15px; }
-      .panel-heading { flex-direction:column; }
-      .local-pill { align-self:flex-start; }
+      .topbar { padding:13px 0; }
+      .topbar-inner, main { width:min(100% - 20px, 860px); }
+      main { padding-top:14px; }
+      .panel { padding:12px; border-radius:12px; }
       .fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
-      .amount-input { font-size:18px !important; }
-      .payment-card { padding:13px; }
-      .card-top { gap:9px; }
-      .number { flex-basis:34px; height:34px; }
-      .status-pill { font-size:9px; }
+      .card-top { grid-template-columns:28px minmax(0,1fr); }
+      .number { width:28px; height:28px; }
+      .status-pill { grid-column:1 / -1; justify-self:center; }
       .input-tools { align-items:stretch; }
       .button-row { width:100%; }
       .button-row .btn { flex:1; }
@@ -203,44 +201,29 @@
     <div class="topbar-inner">
       <div class="brand">
         <span class="brand-mark">CP</span>
-        <span>Catatan Pencairan<small>OUTPUT DECODER · PROTOTYPE</small></span>
+        <span>Catatan Pencairan Maker</span>
       </div>
     </div>
   </header>
 
   <main>
-    <section class="intro">
-      <div class="eyebrow">Maker → Catatan</div>
-      <h1>Decode pencairan, satu card per baris.</h1>
-      <p>Paste hasil output dari Maker-Pencairan. Setiap card menyediakan tiga field deskripsi (maksimal 40 karakter per field) dan nominal yang bisa disalin terpisah. Urutan transaksi tetap mengikuti output Maker.</p>
-    </section>
-
-    <section class="panel" aria-labelledby="inputHeading">
-      <div class="panel-heading">
-        <div>
-          <h2 id="inputHeading">1. Tempel output Maker-Pencairan</h2>
-          <p class="subcopy">Format asli dipertahankan per baris; urutan transaksi tidak diubah.</p>
-        </div>
-        <span class="local-pill">Diproses lokal di browser</span>
-      </div>
-      <textarea id="sourceInput" spellcheck="false" placeholder="Paste seluruh output dari Maker-Pencairan di sini…"></textarea>
+        <section class="panel" aria-labelledby="inputHeading">
+      <div class="panel-heading"><h2 id="inputHeading">Input Data</h2></div>
+      <textarea id="sourceInput" spellcheck="false" placeholder="Tempel output Maker-Pencairan di sini…"></textarea>
       <div class="input-tools">
         <div class="button-row">
-          <button class="btn btn-primary" id="decodeBtn" type="button">↳ Decode output</button>
-          <button class="btn btn-secondary" id="sampleBtn" type="button">Lihat data contoh</button>
-          <button class="btn btn-secondary" id="clearBtn" type="button">Kosongkan</button>
+          <button class="btn btn-primary" id="decodeBtn" type="button">Decode</button>
+          <button class="btn btn-secondary" id="clearBtn" type="button">Clear</button>
         </div>
-        <span class="tiny-note">Tanpa batas dapur/tanggal · Tidak ada validasi duplikat</span>
       </div>
-      <div class="notice info" id="decodeNotice" role="status">Paste output Maker-Pencairan, lalu tekan Decode. Atau gunakan data contoh untuk melihat bentuk card.</div>
+      <div class="notice info" id="decodeNotice" role="status" hidden></div>
       <div class="notice warning" id="pendingNotice" hidden>Ada perubahan input yang belum di-decode. Tekan Decode sebelum menyalin atau mengubah status card.</div>
-      <div class="notice warning" id="demoNotice" hidden>Mode contoh: data ini hanya simulasi, bukan transaksi asli. Tombol Copy dinonaktifkan agar nominal contoh tidak tersalin tanpa sengaja.</div>
     </section>
 
     <section aria-labelledby="cardsHeading">
       <div class="stats">
         <div>
-          <h2 id="cardsHeading">2. Daftar pencairan</h2>
+          <h2 id="cardsHeading">Output Pencairan</h2>
           <p id="summaryText">Belum ada hasil Decode.</p>
         </div>
         <div class="stats-actions">
@@ -253,42 +236,21 @@
       <div class="empty-state" id="emptyState">
         <div class="empty-icon">↳</div>
         <strong>Belum ada pencairan untuk ditampilkan</strong>
-        <p>Masukkan hasil Maker-Pencairan dan tekan Decode. Setiap transaksi menjadi card ringkas berisi tiga field deskripsi, nominal, tombol Copy, dan checklist eksekusi.</p>
+        <p>Tempel output Maker-Pencairan di atas, lalu tekan Decode.</p>
       </div>
       <div class="ignored-panel" id="ignoredPanel" hidden>
         <h3>Baris yang tidak dikenali sebagai transaksi</h3>
         <ul id="ignoredList"></ul>
       </div>
     </section>
-    <footer>Prototype lokal · Checklist disimpan hanya di browser ini · Status tidak tersinkron antar-komputer</footer>
   </main>
 
   <script>
     'use strict';
 
     const STORAGE_KEY = 'catatan-pencairan-gen-decoder-prototype-v1';
-    const SAMPLE_SOURCE = [
-      'Koperasi Arutala, 15-Okt-2026',
-      'Gaji Relawan : Budi Santoso - BNI / 1234567890 · 1.200.000',
-      'GAS : PT Gas Nusantara - BNI / 9876543210 · 500.000',
-      'RAB : CV Bahan Pokok - BRI / 1122334455 · 2.350.000',
-      'RAB : CV Pangan Sejahtera - BRI / 1122334455 · Minyak, Roti, Bumbu · 850.000',
-      'Ops Harian : Yayasan Arutala - BNI / 333444555 · 750.000',
-      'Lain-lain : Biaya Transport Relawan - Yayasan Arutala - BNI / 444555666 · 300.000',
-      '',
-      '_OPS Real_ · 1.200.000',
-      '',
-      'Dapur Melati, 16-Okt-2026',
-      'Sewa Kendaraan Mobil (01-Okt-2026 – 31-Okt-2026) : Nama Akun - BRI / 123456789 · 900.000',
-      'Insentif PIC Sekolah : Yayasan Melati - BNI / 555666777 · 650.000',
-      '',
-      'Campakamulya, 17-Okt-2026',
-      'Gaji Relawan, Insentif PIC Sekolah, Insentif PIC Posyandu : Yayasan Campakamulya - BNI / 777888999 · 3.450.000'
-    ].join('\n');
-
     const sourceInput = document.getElementById('sourceInput');
     const decodeBtn = document.getElementById('decodeBtn');
-    const sampleBtn = document.getElementById('sampleBtn');
     const clearBtn = document.getElementById('clearBtn');
     const cardsEl = document.getElementById('cards');
     const emptyState = document.getElementById('emptyState');
@@ -298,7 +260,6 @@
     const resetChecksBtn = document.getElementById('resetChecksBtn');
     const decodeNotice = document.getElementById('decodeNotice');
     const pendingNotice = document.getElementById('pendingNotice');
-    const demoNotice = document.getElementById('demoNotice');
     const ignoredPanel = document.getElementById('ignoredPanel');
     const ignoredList = document.getElementById('ignoredList');
 
@@ -537,7 +498,7 @@
           demoMode: demoMode
         }));
       } catch (error) {
-        decodeNotice.textContent = 'Browser tidak mengizinkan penyimpanan lokal. Data tetap bisa dipakai selama halaman ini terbuka.';
+        setDecodeNotice('Browser tidak mengizinkan penyimpanan lokal. Data tetap bisa dipakai selama halaman ini terbuka.');
       }
     }
 
@@ -556,13 +517,8 @@
         return '<li>Baris ' + item.lineNo + ': ' + escapeHtml(item.text) + ' — ' + escapeHtml(item.reason) + '</li>';
       }).join('');
       pendingNotice.hidden = !sourcePending;
-      demoNotice.hidden = !demoMode;
-      cardsEl.querySelectorAll('button[data-action], input[data-action="toggle"]').forEach(function (element) {
-        if (element.dataset.action === 'toggle') {
-          element.disabled = sourcePending;
-        } else {
-          element.disabled = sourcePending || demoMode;
-        }
+      cardsEl.querySelectorAll('input[data-action="toggle"]').forEach(function (element) {
+        element.disabled = sourcePending;
       });
     }
 
@@ -579,7 +535,6 @@
             '</label>' +
             '<div class="field-entry">' +
               '<input class="description-input" id="' + escapeHtml(fieldId) + '" data-role="description" data-description-index="' + descriptionIndex + '" type="text" maxlength="40" autocomplete="off" spellcheck="false" value="' + escapeHtml(value || '') + '">' +
-              '<button class="btn-copy-small" type="button" data-action="copy-description" data-description-index="' + descriptionIndex + '" aria-label="Copy Deskripsi ' + (descriptionIndex + 1) + '" title="Copy Deskripsi ' + (descriptionIndex + 1) + '">▣</button>' +
             '</div>' +
           '</div>';
         }).join('');
@@ -588,8 +543,7 @@
           '<div class="card-top">' +
             '<div class="number">' + String(index + 1).padStart(2, '0') + '</div>' +
             '<div class="card-head">' +
-              '<div class="card-name-row"><span class="card-category">' + escapeHtml(card.category) + '</span>' +
-                '<span class="kind-pill' + (card.isReal ? ' real' : '') + '">' + (card.isReal ? 'Realisasi' : 'Pencairan') + '</span></div>' +
+              '<div class="card-name-row"><span class="card-category">' + escapeHtml(card.category) + '</span></div>' +
               '<div class="card-context">' + escapeHtml(card.kitchen) + ' <span aria-hidden="true">·</span> ' + escapeHtml(card.date) + '</div>' +
             '</div>' +
             '<span class="status-pill">' + (done ? 'Sudah dieksekusi' : 'Belum dieksekusi') + '</span>' +
@@ -598,7 +552,6 @@
             '<div class="field-group"><label class="field-label" for="amount-' + escapeHtml(card.id) + '">Nominal</label>' +
               '<div class="field-entry">' +
                 '<input class="amount-input" id="amount-' + escapeHtml(card.id) + '" data-role="amount" type="text" inputmode="numeric" autocomplete="off" value="' + escapeHtml(formatAmount(card.amount)) + '">' +
-                '<button class="btn-copy-small" type="button" data-action="copy-amount" aria-label="Copy Nominal" title="Copy Nominal">▣</button>' +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -622,7 +575,7 @@
         ignoredLines = [];
         demoMode = false;
         renderCards();
-        decodeNotice.textContent = 'Belum ada teks. Paste output Maker-Pencairan atau pilih data contoh.';
+        setDecodeNotice('');
         persistWorkspace();
         return;
       }
@@ -641,18 +594,17 @@
       const validIds = new Set(cards.map(function (card) { return card.id; }));
       completedIds = new Set(Array.from(completedIds).filter(function (id) { return validIds.has(id); }));
       renderCards();
-      decodeNotice.textContent = cards.length
-        ? 'Decode selesai. Card mempertahankan urutan baris dari Maker-Pencairan. Nominal tampil dengan titik; tombol Copy Nominal menyalin angka tanpa titik.'
-        : 'Tidak ada baris transaksi yang dikenali. Periksa format output atau gunakan data contoh.';
+      setDecodeNotice(cards.length ? '' : 'Tidak ada baris transaksi yang dikenali. Periksa format output.');
       persistWorkspace();
     }
 
-    async function copyToClipboard(text, button) {
-      if (sourcePending || demoMode) return;
-      if (!String(text || '').trim()) {
-        decodeNotice.textContent = 'Tidak ada isi untuk disalin.';
-        return;
-      }
+    function setDecodeNotice(message) {
+      decodeNotice.textContent = message;
+      decodeNotice.hidden = !message;
+    }
+
+    async function copyToClipboard(text, field) {
+      if (sourcePending || !String(text || '').trim()) return;
 
       try {
         if (navigator.clipboard && window.isSecureContext) {
@@ -668,25 +620,18 @@
           temporary.remove();
           if (!copied) throw new Error('Clipboard unavailable');
         }
-        const oldText = button.textContent;
-        const oldLabel = button.getAttribute('aria-label');
-        button.textContent = '✓';
-        button.setAttribute('aria-label', 'Tersalin');
-        button.classList.add('copied');
+        field.classList.add('copied-field');
         window.setTimeout(function () {
-          button.textContent = oldText;
-          if (oldLabel === null) button.removeAttribute('aria-label');
-          else button.setAttribute('aria-label', oldLabel);
-          button.classList.remove('copied');
-        }, 1100);
+          field.classList.remove('copied-field');
+        }, 1300);
       } catch (error) {
-        decodeNotice.textContent = 'Browser gagal mengakses clipboard. Coba gunakan HTTPS atau salin secara manual.';
+        setDecodeNotice('Browser gagal mengakses clipboard. Coba gunakan HTTPS atau salin secara manual.');
       }
     }
 
     sourceInput.addEventListener('input', function () {
       sourcePending = sourceInput.value.trim() !== decodedSource;
-      decodeBtn.textContent = sourcePending ? '↳ Decode perubahan' : '↳ Decode output';
+      decodeBtn.textContent = sourcePending ? 'Decode perubahan' : 'Decode';
       updateProgress();
     });
 
@@ -696,26 +641,18 @@
       updateProgress();
     });
 
-    sampleBtn.addEventListener('click', function () {
-      sourceInput.value = SAMPLE_SOURCE;
-      sourcePending = false;
-      processSource(SAMPLE_SOURCE, true);
-      decodeNotice.textContent = 'Data contoh berhasil di-decode untuk pratinjau. Untuk transaksi asli, paste output Maker-Pencairan lalu tekan Decode.';
-      updateProgress();
-    });
-
     clearBtn.addEventListener('click', function () {
       sourceInput.value = '';
       sourcePending = false;
       processSource('', false);
-      decodeBtn.textContent = '↳ Decode output';
+      decodeBtn.textContent = 'Decode';
     });
 
     resetChecksBtn.addEventListener('click', function () {
       completedIds.clear();
       renderCards();
       persistWorkspace();
-      decodeNotice.textContent = 'Checklist direset. Tidak ada transaksi yang dihapus.';
+      setDecodeNotice('Checklist direset. Tidak ada transaksi yang dihapus.');
     });
 
     cardsEl.addEventListener('input', function (event) {
@@ -768,21 +705,16 @@
     });
 
     cardsEl.addEventListener('click', function (event) {
-      const button = event.target.closest('button[data-action]');
-      if (!button) return;
-      const cardEl = button.closest('[data-card-id]');
-      if (!cardEl) return;
-      const card = cards.find(function (item) { return item.id === cardEl.dataset.cardId; });
-      if (!card) return;
+      const field = event.target.closest('input[data-role="description"], input[data-role="amount"]');
+      if (!field) return;
+      const cardEl = field.closest('[data-card-id]');
+      if (!cardEl || !cards.some(function (item) { return item.id === cardEl.dataset.cardId; })) return;
 
-      if (button.dataset.action === 'copy-description') {
-        const descriptionIndex = Number(button.dataset.descriptionIndex);
-        const field = cardEl.querySelector('[data-role="description"][data-description-index="' + descriptionIndex + '"]');
-        if (field) void copyToClipboard(field.value, button);
-      } else if (button.dataset.action === 'copy-amount') {
-        const field = cardEl.querySelector('[data-role="amount"]');
-        const amountDigits = digitsOnly(field.value);
-        void copyToClipboard(amountDigits, button);
+      field.select();
+      if (field.dataset.role === 'description') {
+        void copyToClipboard(field.value, field);
+      } else if (field.dataset.role === 'amount') {
+        void copyToClipboard(digitsOnly(field.value), field);
       }
     });
 
@@ -802,9 +734,9 @@
           return cards.some(function (card) { return card.id === id; });
         }));
         renderCards();
-        decodeNotice.textContent = 'Data terakhir dipulihkan dari penyimpanan lokal browser ini.';
+        setDecodeNotice('');
       } catch (error) {
-        decodeNotice.textContent = 'Penyimpanan lokal tidak bisa dibaca. Paste ulang output untuk melanjutkan.';
+        setDecodeNotice('Penyimpanan lokal tidak bisa dibaca. Paste ulang output untuk melanjutkan.');
       }
     }
 
