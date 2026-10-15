@@ -351,13 +351,46 @@
       return value || 'Lain-lain';
     }
 
+    function parseTargetAccount(rawDescription) {
+      const source = String(rawDescription || '').trim();
+      if (/^_OPS Real_$/i.test(source)) return 'Realisasi Ops Harian';
+
+      // RAB rows may include product text after the destination account.
+      const firstSegment = source.split(' · ')[0].trim();
+      const colonIndex = firstSegment.indexOf(':');
+      if (colonIndex < 0) return '';
+
+      const prefix = firstSegment.slice(0, colonIndex).trim();
+      const targetText = firstSegment.slice(colonIndex + 1).trim();
+      const match = targetText.match(/^(.*?)\s-\s([A-Z][A-Z0-9 ]*)\s\/\s([^\s]+)$/i);
+      if (!match) return targetText;
+
+      let ownerName = match[1].trim();
+      const bank = match[2].trim().toUpperCase();
+      const accountNumber = match[3].trim();
+
+      // Lain-lain rows are "need - account owner - BANK / account".
+      if (/^Lain-lain$/i.test(prefix)) {
+        const ownerSegments = ownerName.split(/\s-\s/).filter(Boolean);
+        ownerName = ownerSegments.length > 1 ? ownerSegments[ownerSegments.length - 1].trim() : ownerName;
+      }
+
+      return ownerName ? ownerName + ' - ' + bank + ' / ' + accountNumber : '';
+    }
+
     function describeTransaction(rawDescription, kitchen, date) {
       const source = String(rawDescription || '').trim();
       const normalizedKitchen = String(kitchen || '').trim().toLocaleLowerCase('id-ID');
+      const targetAccount = parseTargetAccount(source);
 
       if (/^_OPS Real_$/i.test(source)) {
         const label = 'Realisasi Ops Harian';
-        return { category: label, isReal: true, descriptions: buildDescriptionFields(label, date) };
+        return {
+          category: label,
+          title: targetAccount || label,
+          isReal: true,
+          descriptions: buildDescriptionFields(label, date)
+        };
       }
 
       if (/^RAB\s*:/i.test(source)) {
@@ -369,32 +402,32 @@
         const label = products.length
           ? 'Pembayaran ' + joinNatural(products)
           : 'Pembayaran Bahan Baku';
-        return { category: label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+        return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
       if (/^GAS\s*:/i.test(source)) {
         const label = 'Pembayaran Gas';
-        return { category: label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+        return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
       if (/^Ops Harian\s*:/i.test(source)) {
         const label = 'Pembayaran Ops Harian';
-        return { category: label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+        return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
       if (/^Sewa SPPG\s*:/i.test(source)) {
         const label = 'Sewa SPPG';
-        return { category: label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+        return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
       if (/^Sewa Kendaraan\b/i.test(source)) {
         const label = 'Sewa Kendaraan';
-        return { category: label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+        return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
       if (/^Lain-lain\s*:/i.test(source)) {
         const label = extractOtherDescription(source);
-        return { category: label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+        return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
       const colonIndex = source.indexOf(':');
@@ -410,6 +443,7 @@
         })) {
           return {
             category: 'Gaji dan Insentif (Gabungan)',
+            title: targetAccount || 'Gaji dan Insentif (Gabungan)',
             isReal: false,
             descriptions: PAYROLL_KINDS.map(function (kind) {
               const full = kind + (hasUsableDate(date) ? ', ' + date : '');
@@ -419,12 +453,13 @@
         }
 
         const label = joinNatural(kinds);
-        return { category: label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+        return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
       const fallbackLabel = prefix || 'Pembayaran';
       return {
         category: fallbackLabel,
+        title: targetAccount || fallbackLabel,
         isReal: false,
         descriptions: buildDescriptionFields(fallbackLabel, date)
       };
@@ -480,6 +515,7 @@
           kitchen: kitchen,
           date: date,
           category: details.category,
+          title: details.title || details.category,
           isReal: details.isReal,
           descriptions: descriptions,
           amount: Object.prototype.hasOwnProperty.call(edit, 'amount') ? digitsOnly(edit.amount) : amount
@@ -543,7 +579,7 @@
           '<div class="card-top">' +
             '<div class="number">' + String(index + 1).padStart(2, '0') + '</div>' +
             '<div class="card-head">' +
-              '<div class="card-name-row"><span class="card-category">' + escapeHtml(card.category) + '</span></div>' +
+              '<div class="card-name-row"><span class="card-category" title="' + escapeHtml(card.title || card.category) + '">' + escapeHtml(card.title || card.category) + '</span></div>' +
               '<div class="card-context">' + escapeHtml(card.kitchen) + ' <span aria-hidden="true">·</span> ' + escapeHtml(card.date) + '</div>' +
             '</div>' +
             '<span class="status-pill">' + (done ? 'Sudah dieksekusi' : 'Belum dieksekusi') + '</span>' +
