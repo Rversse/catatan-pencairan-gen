@@ -54,9 +54,9 @@ function getSelectedBahanText() {
   return `${bahan.slice(0, -1).join(', ')}, dan ${bahan[bahan.length - 1]}`
 }
 
-const outputBelanjaEl = document.getElementById('outputBelanja')
+const outputPembayaranEl = document.getElementById('outputPembayaran')
 const outputOperasionalEl = document.getElementById('outputOperasional')
-const outputGasEl = document.getElementById('outputGas')
+const outputPembayaranGasEl = document.getElementById('outputPembayaranGas')
 const outputInsentifFasilitasEl = document.getElementById('outputInsentifFasilitas')
 const outputSewaKendaraanEl = document.getElementById('outputSewaKendaraan')
 const outputGajiRelawanEl = document.getElementById('outputGajiRelawan')
@@ -120,9 +120,9 @@ function formatTanggalNumeric(dateString) {
 
 function updateOutput() {
   if (!tanggalEl.value) {
-    outputBelanjaEl.value = ''
+    outputPembayaranEl.value = ''
     outputOperasionalEl.value = ''
-    outputGasEl.value = ''
+    outputPembayaranGasEl.value = ''
     outputInsentifFasilitasEl.value = ''
     outputSewaKendaraanEl.value = ''
     outputGajiRelawanEl.value = ''
@@ -136,11 +136,11 @@ function updateOutput() {
   const tanggalNumeric = formatTanggalNumeric(tanggalEl.value)
   const bahanText = getSelectedBahanText()
 
-  const belanjaLabel = bahanText ? `Belanja ${bahanText}` : 'Belanja Bahan Baku'
+  const pembayaranLabel = bahanText ? `Pembayaran ${bahanText}` : 'Pembayaran Bahan Baku'
 
-  outputBelanjaEl.value = `${belanjaLabel}, ${tanggalNumeric}`
+  outputPembayaranEl.value = `${pembayaranLabel}, ${tanggalNumeric}`
   outputOperasionalEl.value = `Biaya Ops Harian, ${tanggalNumeric}`
-  outputGasEl.value = `Pembelian Gas, ${tanggalNumeric}`
+  outputPembayaranGasEl.value = `Pembayaran Gas, ${tanggalNumeric}`
   outputInsentifFasilitasEl.value = `Insentif Fasilitas SPPG, ${tanggalNumeric}`
   outputSewaKendaraanEl.value = `Sewa Kendaraan, ${tanggalNumeric}`
   outputGajiRelawanEl.value = `Gaji Relawan, ${tanggalNumeric}`
@@ -219,8 +219,8 @@ tanggalSpasiEl.addEventListener('change', updateOutput)
 
 nominalInputEl.addEventListener('input', updateNominalOutput)
 
-outputBelanjaEl.addEventListener('click', () => {
-  copyText(outputBelanjaEl, () => {
+outputPembayaranEl.addEventListener('click', () => {
+  copyText(outputPembayaranEl, () => {
     resetBahan()
     updateOutput()
   })
@@ -230,8 +230,8 @@ outputOperasionalEl.addEventListener('click', () => {
   copyText(outputOperasionalEl)
 })
 
-outputGasEl.addEventListener('click', () => {
-  copyText(outputGasEl)
+outputPembayaranGasEl.addEventListener('click', () => {
+  copyText(outputPembayaranGasEl)
 })
 
 outputInsentifFasilitasEl.addEventListener('click', () => {
@@ -279,9 +279,9 @@ function flashCopied(textarea) {
 
 // Lock output fields
 ;[
-  outputBelanjaEl,
+  outputPembayaranEl,
   outputOperasionalEl,
-  outputGasEl,
+  outputPembayaranGasEl,
   outputInsentifFasilitasEl,
   outputSewaKendaraanEl,
   outputGajiRelawanEl,
