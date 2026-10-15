@@ -355,7 +355,7 @@
       (products || []).forEach(function (product) {
         const item = String(product || '').trim();
         if (!item) return;
-        const candidate = current ? current + ' ' + item : item;
+        const candidate = current ? current + ', ' + item : item;
 
         if (candidate.length <= MAX_DESCRIPTION_LENGTH) {
           current = candidate;
