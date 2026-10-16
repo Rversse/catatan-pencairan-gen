@@ -156,7 +156,18 @@
       text-transform:none;
     }
     .description-count { margin-left:auto; flex:0 0 auto; color:#8a94a7; font-size:9px; font-weight:650; }
-    .field-entry { min-width:0; }
+    .field-entry { min-width:0; position:relative; }
+    .copy-tooltip {
+      position:absolute; z-index:5; right:5px; top:-25px; padding:4px 7px;
+      border-radius:6px; background:#168552; color:#fff; font-size:10px;
+      font-weight:850; line-height:1.2; white-space:nowrap; pointer-events:none;
+      visibility:hidden; opacity:0; transform:translateY(3px);
+      box-shadow:0 3px 9px rgba(22,101,52,.18);
+      transition:opacity .12s, transform .12s, visibility .12s;
+    }
+    .field-entry.show-copied .copy-tooltip {
+      visibility:visible; opacity:1; transform:translateY(0);
+    }
     .description-input, .amount-input {
       display:block; width:100%; min-width:0; height:36px; min-height:36px;
       border:1px solid #cfd7e5; border-radius:8px; background:#fff; color:var(--text);
@@ -174,11 +185,7 @@
     .completion-row { margin-top:9px; padding-top:8px; gap:8px; }
     .amount-entry { display:flex; align-items:center; gap:7px; }
     .amount-entry .amount-input { flex:1; width:0; }
-    .check-label { display:flex; align-items:center; justify-content:center; flex:0 0 auto; cursor:pointer; }
-    .check-label input { appearance:none; width:20px; height:20px; margin:0; border:1.5px solid #b7c1d2; border-radius:6px; background:#fff; display:grid; place-items:center; cursor:pointer; }
-    .check-label input:checked { background:#168552; border-color:#168552; }
-    .check-label input:checked:after { content:"✓"; color:#fff; font-size:14px; font-weight:900; line-height:1; }
-    .check-label input:focus-visible { outline:3px solid rgba(72,91,221,.25); outline-offset:2px; }
+    .copy-input-help { color:var(--muted); font-size:11px; margin-top:6px; }
     .stats { margin:18px 0 11px; }
     .cards { gap:10px; }
     @media (max-width:900px) { .fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
@@ -215,11 +222,12 @@
       <div class="input-tools">
         <div class="button-row">
           <button class="btn btn-primary" id="decodeBtn" type="button">Decode</button>
+          <button class="btn btn-secondary" id="copyInputBtn" type="button" disabled>Copy Input untuk SIM-SPPG</button>
           <button class="btn btn-secondary" id="clearBtn" type="button">Clear</button>
         </div>
       </div>
       <div class="notice info" id="decodeNotice" role="status" hidden></div>
-      <div class="notice warning" id="pendingNotice" hidden>Ada perubahan input yang belum di-decode. Tekan Decode sebelum menyalin atau mengubah status card.</div>
+      <div class="notice warning" id="pendingNotice" hidden>Ada perubahan input yang belum di-decode. Tekan Decode sebelum menyalin field transaksi.</div>
     </section>
 
     <section aria-labelledby="cardsHeading">
@@ -231,7 +239,7 @@
         </div>
         <div class="stats-actions">
           <span class="counter" id="counterText">0 Pencairan</span>
-          <button class="btn btn-quiet" id="resetChecksBtn" type="button" disabled>Reset</button>
+          <button class="btn btn-quiet" id="resetChecksBtn" type="button" disabled>Reset Progres</button>
         </div>
       </div>
       <div class="progress-shell" aria-label="Progres eksekusi"><div class="progress-bar" id="progressBar"></div></div>
@@ -254,6 +262,7 @@
     const STORAGE_KEY = 'catatan-pencairan-gen-decoder-prototype-v1';
     const sourceInput = document.getElementById('sourceInput');
     const decodeBtn = document.getElementById('decodeBtn');
+    const copyInputBtn = document.getElementById('copyInputBtn');
     const clearBtn = document.getElementById('clearBtn');
     const cardsEl = document.getElementById('cards');
     const emptyState = document.getElementById('emptyState');
@@ -269,6 +278,8 @@
     let decodedSource = '';
     let cards = [];
     let completedIds = new Set();
+    let copiedFieldsByCard = {};
+    let copiedTooltipTimers = new WeakMap();
     let edits = {};
     let ignoredLines = [];
     let demoMode = false;
@@ -669,6 +680,7 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
           source: decodedSource,
           completedIds: Array.from(completedIds),
+          copiedFieldsByCard: copiedFieldsByCard,
           edits: edits,
           demoMode: demoMode
         }));
@@ -677,29 +689,76 @@
       }
     }
 
+    const REQUIRED_FIELD_KEYS = ['amount', 'description-0', 'description-1', 'description-2'];
+
+    function getCardFieldValue(card, fieldKey) {
+      if (fieldKey === 'amount') return digitsOnly(card.amount);
+      const descriptionIndex = Number(String(fieldKey).replace('description-', ''));
+      return String(card.descriptions[descriptionIndex] || '');
+    }
+
+    function getCopiedFieldCount(card) {
+      const copied = copiedFieldsByCard[card.id] || {};
+      return REQUIRED_FIELD_KEYS.filter(function (fieldKey) {
+        return Object.prototype.hasOwnProperty.call(copied, fieldKey) &&
+          copied[fieldKey] === getCardFieldValue(card, fieldKey);
+      }).length;
+    }
+
+    function isCardComplete(card) {
+      return getCopiedFieldCount(card) === REQUIRED_FIELD_KEYS.length;
+    }
+
+    function refreshCardStatus(card, cardEl) {
+      const copiedCount = getCopiedFieldCount(card);
+      const done = copiedCount === REQUIRED_FIELD_KEYS.length;
+      if (done) completedIds.add(card.id);
+      else completedIds.delete(card.id);
+
+      if (!cardEl) return;
+      cardEl.classList.toggle('is-done', done);
+      const status = cardEl.querySelector('.status-dot');
+      if (status) {
+        const label = done
+          ? 'Pencairan Selesai'
+          : copiedCount + '/' + REQUIRED_FIELD_KEYS.length + ' field tersalin';
+        status.setAttribute('aria-label', label);
+        status.title = label;
+      }
+    }
+
     function updateProgress() {
       const total = cards.length;
-      const done = cards.filter(function (card) { return completedIds.has(card.id); }).length;
+      completedIds = new Set(cards.filter(isCardComplete).map(function (card) { return card.id; }));
+      const done = completedIds.size;
+      const copiedTotal = cards.reduce(function (sum, card) {
+        return sum + getCopiedFieldCount(card);
+      }, 0);
       counterText.textContent = total + ' Pencairan';
       summaryText.textContent = total
         ? done + ' dari ' + total + ' pencairan sudah selesai.'
         : 'Belum ada hasil Decode.';
       progressBar.style.width = total ? ((done / total) * 100) + '%' : '0%';
-      resetChecksBtn.disabled = total === 0 || done === 0 || sourcePending;
+      resetChecksBtn.disabled = total === 0 || copiedTotal === 0 || sourcePending;
       emptyState.hidden = total > 0;
       ignoredPanel.hidden = ignoredLines.length === 0;
       ignoredList.innerHTML = ignoredLines.map(function (item) {
         return '<li>Baris ' + item.lineNo + ': ' + escapeHtml(item.text) + ' — ' + escapeHtml(item.reason) + '</li>';
       }).join('');
       pendingNotice.hidden = !sourcePending;
-      cardsEl.querySelectorAll('input[data-action="toggle"]').forEach(function (element) {
+      cardsEl.querySelectorAll('input[data-role="description"], input[data-role="amount"]').forEach(function (element) {
         element.disabled = sourcePending;
       });
+      copyInputBtn.disabled = !sourceInput.value.trim();
     }
 
     function renderCards() {
       cardsEl.innerHTML = cards.map(function (card, index) {
-        const done = completedIds.has(card.id);
+        const done = isCardComplete(card);
+        const copiedCount = getCopiedFieldCount(card);
+        const statusLabel = done
+          ? 'Pencairan Selesai'
+          : copiedCount + '/' + REQUIRED_FIELD_KEYS.length + ' field tersalin';
         const descriptionFields = card.descriptions.map(function (value, descriptionIndex) {
           const fieldId = 'desc-' + card.id + '-' + descriptionIndex;
           const charCount = String(value || '').length;
@@ -710,9 +769,18 @@
             '</label>' +
             '<div class="field-entry">' +
               '<input class="description-input" id="' + escapeHtml(fieldId) + '" data-role="description" data-description-index="' + descriptionIndex + '" type="text" maxlength="40" autocomplete="off" spellcheck="false" value="' + escapeHtml(value || '') + '">' +
+              '<span class="copy-tooltip" aria-live="polite">Copied</span>' +
             '</div>' +
           '</div>';
         }).join('');
+        const amountField =
+          '<div class="field-group">' +
+            '<label class="field-label" for="amount-' + escapeHtml(card.id) + '">Nominal</label>' +
+            '<div class="field-entry">' +
+              '<input class="amount-input" id="amount-' + escapeHtml(card.id) + '" data-role="amount" type="text" inputmode="numeric" autocomplete="off" value="' + escapeHtml(formatAmount(card.amount)) + '">' +
+              '<span class="copy-tooltip" aria-live="polite">Copied</span>' +
+            '</div>' +
+          '</div>';
 
         return '<article class="payment-card' + (done ? ' is-done' : '') + '" data-card-id="' + escapeHtml(card.id) + '">' +
           '<div class="card-top">' +
@@ -721,18 +789,10 @@
               '<div class="card-name-row"><span class="card-category" title="' + escapeHtml(card.title || card.category) + '">' + escapeHtml(card.title || card.category) + '</span></div>' +
               '<div class="card-context">' + escapeHtml(card.kitchen) + ' <span aria-hidden="true">·</span> ' + escapeHtml(card.date) + '</div>' +
             '</div>' +
-            '<span class="status-dot" aria-label="' + (done ? 'Pencairan Selesai' : 'Belum selesai') + '" title="' + (done ? 'Pencairan Selesai' : 'Belum selesai') + '"></span>' +
+            '<span class="status-dot" aria-label="' + escapeHtml(statusLabel) + '" title="' + escapeHtml(statusLabel) + '"></span>' +
           '</div>' +
-          '<div class="fields">' + descriptionFields +
-            '<div class="field-group"><label class="field-label" for="amount-' + escapeHtml(card.id) + '">Nominal</label>' +
-              '<div class="field-entry amount-entry">' +
-                '<input class="amount-input" id="amount-' + escapeHtml(card.id) + '" data-role="amount" type="text" inputmode="numeric" autocomplete="off" value="' + escapeHtml(formatAmount(card.amount)) + '">' +
-                '<label class="check-label" title="' + (done ? 'Pencairan Selesai' : 'Tandai Pencairan Selesai') + '" aria-label="' + (done ? 'Pencairan Selesai' : 'Tandai Pencairan Selesai') + '"><input type="checkbox" data-action="toggle" aria-label="' + (done ? 'Pencairan Selesai' : 'Tandai Pencairan Selesai') + '" ' + (done ? 'checked' : '') + '></label>' +
-              '</div>' +
-            '</div>' +
-          '</div>' +
+          '<div class="fields">' + amountField + descriptionFields + '</div>' +
           (card.isReal ? '<div class="real-note">Catatan realisasi operasional — bukan instruksi transfer rekening. Nominal tetap bisa disalin tanpa titik.</div>' : '') +
-
         '</article>';
       }).join('');
       updateProgress();
@@ -744,6 +804,7 @@
         decodedSource = '';
         cards = [];
         completedIds.clear();
+        copiedFieldsByCard = {};
         edits = {};
         ignoredLines = [];
         demoMode = false;
@@ -756,6 +817,7 @@
       const isSameBatch = cleanedSource === decodedSource && Boolean(isDemo) === demoMode;
       if (!isSameBatch) {
         completedIds.clear();
+        copiedFieldsByCard = {};
         edits = {};
       }
 
@@ -765,7 +827,10 @@
       cards = parsed.cards;
       ignoredLines = parsed.ignored;
       const validIds = new Set(cards.map(function (card) { return card.id; }));
-      completedIds = new Set(Array.from(completedIds).filter(function (id) { return validIds.has(id); }));
+      copiedFieldsByCard = Object.fromEntries(Object.entries(copiedFieldsByCard).filter(function (entry) {
+        return validIds.has(entry[0]);
+      }));
+      completedIds = new Set(cards.filter(isCardComplete).map(function (card) { return card.id; }));
       renderCards();
       setDecodeNotice(cards.length ? '' : 'Tidak ada baris transaksi yang dikenali. Periksa format output.');
       persistWorkspace();
@@ -776,27 +841,50 @@
       decodeNotice.hidden = !message;
     }
 
-    async function copyToClipboard(text, field) {
-      if (sourcePending || !String(text || '').trim()) return;
+    async function writeClipboard(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      const temporary = document.createElement('textarea');
+      temporary.value = text;
+      temporary.style.position = 'fixed';
+      temporary.style.opacity = '0';
+      document.body.appendChild(temporary);
+      temporary.select();
+      const copied = document.execCommand('copy');
+      temporary.remove();
+      if (!copied) throw new Error('Clipboard unavailable');
+    }
+
+    function showCopiedTooltip(field) {
+      const entry = field.closest('.field-entry');
+      if (!entry) return;
+      const previousTimer = copiedTooltipTimers.get(entry);
+      if (previousTimer) window.clearTimeout(previousTimer);
+      entry.classList.add('show-copied');
+      copiedTooltipTimers.set(entry, window.setTimeout(function () {
+        entry.classList.remove('show-copied');
+      }, 1100));
+    }
+
+    async function copyToClipboard(text, field, card, fieldKey, cardEl) {
+      if (sourcePending) return;
+      const value = String(text == null ? '' : text);
 
       try {
-        if (navigator.clipboard && window.isSecureContext) {
-          await navigator.clipboard.writeText(text);
-        } else {
-          const temporary = document.createElement('textarea');
-          temporary.value = text;
-          temporary.style.position = 'fixed';
-          temporary.style.opacity = '0';
-          document.body.appendChild(temporary);
-          temporary.select();
-          const copied = document.execCommand('copy');
-          temporary.remove();
-          if (!copied) throw new Error('Clipboard unavailable');
-        }
+        // Empty description fields count as acknowledged fields, but there is no text to copy.
+        if (value !== '') await writeClipboard(value);
+        if (!copiedFieldsByCard[card.id]) copiedFieldsByCard[card.id] = {};
+        copiedFieldsByCard[card.id][fieldKey] = value;
         field.classList.add('copied-field');
         window.setTimeout(function () {
           field.classList.remove('copied-field');
         }, 1300);
+        showCopiedTooltip(field);
+        refreshCardStatus(card, cardEl);
+        updateProgress();
+        persistWorkspace();
       } catch (error) {
         setDecodeNotice('Browser gagal mengakses clipboard. Coba gunakan HTTPS atau salin secara manual.');
       }
@@ -805,7 +893,22 @@
     sourceInput.addEventListener('input', function () {
       sourcePending = sourceInput.value.trim() !== decodedSource;
       decodeBtn.textContent = sourcePending ? 'Decode perubahan' : 'Decode';
+      copyInputBtn.disabled = !sourceInput.value.trim();
       updateProgress();
+    });
+
+    copyInputBtn.addEventListener('click', async function () {
+      const inputText = sourceInput.value;
+      if (!inputText.trim()) {
+        setDecodeNotice('Belum ada input data untuk disalin.');
+        return;
+      }
+      try {
+        await writeClipboard(inputText);
+        setDecodeNotice('Seluruh input data berhasil disalin. Sekarang bisa langsung paste ke SIM-SPPG.');
+      } catch (error) {
+        setDecodeNotice('Browser gagal menyalin input data. Coba gunakan HTTPS atau salin manual.');
+      }
     });
 
     decodeBtn.addEventListener('click', function () {
@@ -823,9 +926,10 @@
 
     resetChecksBtn.addEventListener('click', function () {
       completedIds.clear();
+      copiedFieldsByCard = {};
       renderCards();
       persistWorkspace();
-      setDecodeNotice('Checklist direset. Tidak ada transaksi yang dihapus.');
+      setDecodeNotice('Progres salin field direset. Data transaksi tidak dihapus.');
     });
 
     cardsEl.addEventListener('input', function (event) {
@@ -836,55 +940,43 @@
       const card = cards.find(function (item) { return item.id === cardEl.dataset.cardId; });
       if (!card) return;
 
+      let fieldKey = '';
       if (target.dataset.role === 'description') {
         const descriptionIndex = Number(target.dataset.descriptionIndex);
         card.descriptions[descriptionIndex] = target.value;
+        fieldKey = 'description-' + descriptionIndex;
         const count = target.closest('.field-group')?.querySelector('.description-count');
         if (count) count.textContent = target.value.length + '/40';
         edits[card.id] = { descriptions: card.descriptions.slice(), amount: card.amount };
-        persistWorkspace();
       } else if (target.dataset.role === 'amount') {
         card.amount = digitsOnly(target.value);
+        fieldKey = 'amount';
         edits[card.id] = { descriptions: card.descriptions.slice(), amount: card.amount };
-        persistWorkspace();
       }
+      const copied = copiedFieldsByCard[card.id];
+      if (fieldKey && copied && Object.prototype.hasOwnProperty.call(copied, fieldKey) &&
+          copied[fieldKey] !== getCardFieldValue(card, fieldKey)) {
+        delete copied[fieldKey];
+      }
+      refreshCardStatus(card, cardEl);
+      updateProgress();
+      persistWorkspace();
     });
 
     cardsEl.addEventListener('change', function (event) {
       const target = event.target;
-      if (!(target instanceof HTMLInputElement)) return;
+      if (!(target instanceof HTMLInputElement) || target.dataset.role !== 'amount') return;
       const cardEl = target.closest('[data-card-id]');
       if (!cardEl) return;
       const card = cards.find(function (item) { return item.id === cardEl.dataset.cardId; });
       if (!card) return;
 
-      if (target.dataset.action === 'toggle') {
-        if (target.checked) completedIds.add(card.id);
-        else completedIds.delete(card.id);
-        const done = completedIds.has(card.id);
-        cardEl.classList.toggle('is-done', done);
-        const status = cardEl.querySelector('.status-dot');
-        if (status) {
-          status.setAttribute('aria-label', done ? 'Pencairan Selesai' : 'Belum selesai');
-          status.title = done ? 'Pencairan Selesai' : 'Belum selesai';
-        }
-        const checkbox = cardEl.querySelector('input[data-action="toggle"]');
-        if (checkbox) {
-          const label = done ? 'Pencairan Selesai' : 'Tandai Pencairan Selesai';
-          checkbox.setAttribute('aria-label', label);
-          checkbox.closest('label')?.setAttribute('title', label);
-          checkbox.closest('label')?.setAttribute('aria-label', label);
-        }
-        updateProgress();
-        persistWorkspace();
-      }
-
-      if (target.dataset.role === 'amount') {
-        card.amount = digitsOnly(target.value);
-        target.value = formatAmount(card.amount);
-        edits[card.id] = { descriptions: card.descriptions.slice(), amount: card.amount };
-        persistWorkspace();
-      }
+      card.amount = digitsOnly(target.value);
+      target.value = formatAmount(card.amount);
+      edits[card.id] = { descriptions: card.descriptions.slice(), amount: card.amount };
+      refreshCardStatus(card, cardEl);
+      updateProgress();
+      persistWorkspace();
     });
 
     cardsEl.addEventListener('click', function (event) {
@@ -894,10 +986,13 @@
       if (!cardEl || !cards.some(function (item) { return item.id === cardEl.dataset.cardId; })) return;
 
       field.select();
+      const card = cards.find(function (item) { return item.id === cardEl.dataset.cardId; });
+      if (!card) return;
       if (field.dataset.role === 'description') {
-        void copyToClipboard(field.value, field);
+        const fieldKey = 'description-' + Number(field.dataset.descriptionIndex);
+        void copyToClipboard(field.value, field, card, fieldKey, cardEl);
       } else if (field.dataset.role === 'amount') {
-        void copyToClipboard(digitsOnly(field.value), field);
+        void copyToClipboard(digitsOnly(field.value), field, card, 'amount', cardEl);
       }
     });
 
@@ -907,15 +1002,20 @@
         if (!saved || !saved.source) return;
         decodedSource = saved.source;
         demoMode = Boolean(saved.demoMode);
+        copiedFieldsByCard = saved.copiedFieldsByCard && typeof saved.copiedFieldsByCard === 'object'
+          ? saved.copiedFieldsByCard
+          : {};
         completedIds = new Set(Array.isArray(saved.completedIds) ? saved.completedIds : []);
         edits = saved.edits && typeof saved.edits === 'object' ? saved.edits : {};
         sourceInput.value = decodedSource;
         const parsed = parseOutput(decodedSource);
         cards = parsed.cards;
         ignoredLines = parsed.ignored;
-        completedIds = new Set(Array.from(completedIds).filter(function (id) {
-          return cards.some(function (card) { return card.id === id; });
+        const validIds = new Set(cards.map(function (card) { return card.id; }));
+        copiedFieldsByCard = Object.fromEntries(Object.entries(copiedFieldsByCard).filter(function (entry) {
+          return validIds.has(entry[0]);
         }));
+        completedIds = new Set(cards.filter(isCardComplete).map(function (card) { return card.id; }));
         renderCards();
         setDecodeNotice('');
       } catch (error) {
@@ -929,6 +1029,7 @@
     decodedSource = '';
     cards = [];
     completedIds.clear();
+    copiedFieldsByCard = {};
     edits = {};
     ignoredLines = [];
     renderCards();
