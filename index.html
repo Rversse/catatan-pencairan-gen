@@ -932,6 +932,11 @@
       demoMode = Boolean(isDemo);
       let parsed = parseOutput(cleanedSource);
       decodedKitchen = parsed.kitchen || '';
+      if (!usesFixedDateFormat(decodedKitchen) && useSpacedDateFormat) {
+        useSpacedDateFormat = false;
+        parsed = parseOutput(cleanedSource);
+        decodedKitchen = parsed.kitchen || '';
+      }
       const showDateFormatButton = usesFixedDateFormat(decodedKitchen) && parsed.cards.length > 0;
       dateFormatBtn.hidden = sourcePending || !showDateFormatButton;
       dateFormatBtn.disabled = false;
