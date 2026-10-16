@@ -770,7 +770,7 @@
 
     function refreshCardStatus(card, cardEl) {
       const copiedCount = getCopiedFieldCount(card);
-      const done = copiedCount === REQUIRED_FIELD_KEYS.length;
+      const done = isCardComplete(card);
       if (done) completedIds.add(card.id);
       else completedIds.delete(card.id);
 
