@@ -883,13 +883,11 @@
             '</div>' +
           '</div>';
 
-        return '<article class="payment-card' + (done ? ' is-done' : '') + '" data-card-id="' + escapeHtml(card.id) + '">' +
+        return '<article class="payment-card' + (done ? ' is-done' : '') + (card.isSecondaryBank ? ' is-secondary-bank' : '') + '" data-card-id="' + escapeHtml(card.id) + '">' +
           '<div class="card-top">' +
             '<div class="number">' + String(index + 1).padStart(2, '0') + '</div>' +
             '<div class="card-head">' +
-              '<div class="card-name-row"><span class="card-category" title="' + escapeHtml(card.title || card.category) + '">' + escapeHtml(card.title || card.category) + '</span>' +
-              (card.isSecondaryBank ? '<span class="bank-route-badge" title="Bukan rekening utama (' + escapeHtml(card.bank) + '). Pindah ke fitur bank yang sesuai.">BANK ' + escapeHtml(card.bank) + ' · PINDAH FITUR</span>' : '') +
-              '</div>' +
+              '<div class="card-name-row"><span class="card-category" title="' + escapeHtml(card.title || card.category) + '">' + escapeHtml(card.title || card.category) + '</span></div>' +
               '<div class="card-context">' + escapeHtml(card.kitchen) + ' <span aria-hidden="true">·</span> ' + escapeHtml(formatOutputDate(card.date)) + '</div>' +
             '</div>' +
             '<span class="status-dot" aria-label="' + escapeHtml(statusLabel) + '" title="' + escapeHtml(statusLabel) + '"></span>' +
@@ -933,17 +931,12 @@
       decodedSource = cleanedSource;
       demoMode = Boolean(isDemo);
       let parsed = parseOutput(cleanedSource);
-      if (usesFixedDateFormat(parsed.kitchen) && useSpacedDateFormat) {
-        useSpacedDateFormat = false;
-        parsed = parseOutput(cleanedSource);
-      }
       decodedKitchen = parsed.kitchen || '';
-      dateFormatBtn.hidden = !decodedKitchen || decodedKitchen === 'Dapur tidak terdeteksi' || parsed.cards.length === 0;
-      dateFormatBtn.disabled = usesFixedDateFormat(decodedKitchen);
+      const showDateFormatButton = usesFixedDateFormat(decodedKitchen) && parsed.cards.length > 0;
+      dateFormatBtn.hidden = sourcePending || !showDateFormatButton;
+      dateFormatBtn.disabled = false;
       dateFormatBtn.textContent = useSpacedDateFormat ? 'DD MMM YYYY' : 'DD-MMM-YYYY';
-      dateFormatBtn.title = dateFormatBtn.disabled
-        ? 'Format tetap DD-MMM-YYYY untuk Cihaur dan Sukaraja (rekening utama BRI).'
-        : 'Ganti format tanggal';
+      dateFormatBtn.title = 'Ganti format tanggal';
       cards = parsed.cards;
       ignoredLines = parsed.ignored;
       const validIds = new Set(cards.map(function (card) { return card.id; }));
@@ -1012,7 +1005,7 @@
     }
 
     dateFormatBtn.addEventListener('click', function () {
-      if (usesFixedDateFormat(decodedKitchen) || dateFormatBtn.hidden) return;
+      if (!usesFixedDateFormat(decodedKitchen) || dateFormatBtn.hidden) return;
       useSpacedDateFormat = !useSpacedDateFormat;
       dateFormatBtn.textContent = useSpacedDateFormat ? 'DD MMM YYYY' : 'DD-MMM-YYYY';
       cards = cards.map(function (card) {
@@ -1040,7 +1033,7 @@
       sourcePending = sourceInput.value.trim() !== decodedSource;
       decodeBtn.textContent = sourcePending ? 'Decode perubahan' : 'Decode';
       copyInputBtn.disabled = !sourceInput.value.trim();
-      dateFormatBtn.hidden = sourcePending || !decodedKitchen || decodedKitchen === 'Dapur tidak terdeteksi' || cards.length === 0;
+      dateFormatBtn.hidden = sourcePending || !usesFixedDateFormat(decodedKitchen) || cards.length === 0;
       updateProgress();
     });
 
