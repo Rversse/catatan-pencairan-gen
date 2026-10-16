@@ -1040,6 +1040,7 @@
       sourcePending = sourceInput.value.trim() !== decodedSource;
       decodeBtn.textContent = sourcePending ? 'Decode perubahan' : 'Decode';
       copyInputBtn.disabled = !sourceInput.value.trim();
+      dateFormatBtn.hidden = sourcePending || !decodedKitchen || decodedKitchen === 'Dapur tidak terdeteksi' || cards.length === 0;
       updateProgress();
     });
 
