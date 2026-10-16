@@ -535,8 +535,9 @@
         return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
-      if (/^Sewa SPPG\s*:/i.test(source)) {
-        const label = 'Pembayaran Sewa SPPG';
+      if (/^(?:Sewa SPPG|Insentif Fasilitas SPPG)\s*:/i.test(source)) {
+        const isFasilitas = /^Insentif Fasilitas SPPG\s*:/i.test(source);
+        const label = isFasilitas ? 'Pembayaran Insentif Fasilitas SPPG' : 'Pembayaran Sewa SPPG';
         return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
