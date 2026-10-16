@@ -293,7 +293,8 @@
     const PAYROLL_KINDS = [
       'Gaji Relawan',
       'Insentif PIC Sekolah',
-      'Insentif PIC Posyandu'
+      'Insentif PIC Posyandu',
+      'Insentif PIC Yayasan'
     ];
 
     function joinNatural(items) {
@@ -357,6 +358,36 @@
 
       // The interface has three description fields, each capped at 40 characters.
       return [chunks[0] || '', chunks[1] || '', chunks[2] || ''];
+    }
+
+    function buildCombinedDescriptionFields(items, date) {
+      const values = (items || []).map(function (item) {
+        return String(item || '').trim();
+      }).filter(Boolean);
+      const fields = ['', '', ''];
+      const fieldCount = Math.min(values.length, fields.length);
+
+      values.slice(0, fields.length).forEach(function (item, index) {
+        fields[index] = index === 0 ? 'Pembayaran ' + item : item;
+      });
+
+      const dateText = hasUsableDate(date) ? String(date).trim() : '';
+      if (dateText && fieldCount > 0) {
+        const lastIndex = fieldCount - 1;
+        const combined = fields[lastIndex] + ', ' + dateText;
+        if (combined.length <= MAX_DESCRIPTION_LENGTH) {
+          fields[lastIndex] = combined;
+        } else if (lastIndex + 1 < fields.length) {
+          const chunks = splitTextAtLimit(fields[lastIndex], MAX_DESCRIPTION_LENGTH);
+          fields[lastIndex] = chunks[0] || '';
+          fields[lastIndex + 1] = [chunks.slice(1).join(' '), dateText].filter(Boolean).join(', ');
+        } else {
+          const room = Math.max(1, MAX_DESCRIPTION_LENGTH - dateText.length - 2);
+          fields[lastIndex] = fields[lastIndex].slice(0, room).trim() + ', ' + dateText;
+        }
+      }
+
+      return fields;
     }
 
     function extractOtherDescription(rawDescription) {
@@ -463,7 +494,6 @@
 
     function describeTransaction(rawDescription, kitchen, date) {
       const source = String(rawDescription || '').trim();
-      const normalizedKitchen = String(kitchen || '').trim().toLocaleLowerCase('id-ID');
       const targetAccount = parseTargetAccount(source);
 
       if (/^_OPS Real_$/i.test(source)) {
@@ -507,12 +537,12 @@
       }
 
       if (/^Sewa SPPG\s*:/i.test(source)) {
-        const label = 'Sewa SPPG';
+        const label = 'Pembayaran Sewa SPPG';
         return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
       if (/^Sewa Kendaraan\b/i.test(source)) {
-        const label = 'Sewa Kendaraan';
+        const label = 'Pembayaran Sewa Kendaraan';
         return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
@@ -532,23 +562,26 @@
         return listedPrefixKinds.has(kind.toLocaleLowerCase('id-ID'));
       });
 
-      if (kinds.length > 0) {
-        if (normalizedKitchen === 'campakamulya' && PAYROLL_KINDS.every(function (kind) {
-          return kinds.includes(kind);
-        })) {
-          return {
-            category: 'Gaji dan Insentif (Gabungan)',
-            title: targetAccount || 'Gaji dan Insentif (Gabungan)',
-            isReal: false,
-            descriptions: PAYROLL_KINDS.map(function (kind) {
-              const full = kind + (hasUsableDate(date) ? ', ' + date : '');
-              return full.length <= MAX_DESCRIPTION_LENGTH ? full : kind;
-            })
-          };
-        }
-
+      if (kinds.length > 1) {
         const label = joinNatural(kinds);
-        return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+        return {
+          category: label,
+          title: targetAccount || label,
+          isReal: false,
+          descriptions: buildCombinedDescriptionFields(kinds, date)
+        };
+      }
+
+      if (kinds.length === 1) {
+        const label = kinds[0];
+        const usesPaymentPrefix = ['Gaji Relawan', 'Insentif PIC Sekolah', 'Insentif PIC Yayasan'].includes(label);
+        const descriptionLabel = usesPaymentPrefix ? 'Pembayaran ' + label : label;
+        return {
+          category: descriptionLabel,
+          title: targetAccount || descriptionLabel,
+          isReal: false,
+          descriptions: buildDescriptionFields(descriptionLabel, date)
+        };
       }
 
       const fallbackLabel = prefix || 'Pembayaran';
