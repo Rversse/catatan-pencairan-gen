@@ -221,7 +221,7 @@
 
   <main>
         <section class="panel" aria-labelledby="inputHeading">
-      <div class="panel-heading"><h2 id="inputHeading">Input Data</h2><button class="btn btn-secondary" id="dateFormatBtn" type="button" aria-label="Ganti format tanggal">DD-MMM-YYYY</button></div>
+      <div class="panel-heading"><h2 id="inputHeading">Input Data</h2><button class="btn btn-secondary" id="dateFormatBtn" type="button" aria-label="Ganti format tanggal" hidden>DD-MMM-YYYY</button></div>
       <textarea id="sourceInput" spellcheck="false"></textarea>
       <div class="input-tools">
         <div class="button-row">
@@ -290,6 +290,7 @@
     let demoMode = false;
     let sourcePending = false;
     let useSpacedDateFormat = false;
+    let decodedKitchen = '';
 
     function escapeHtml(value) {
       return String(value).replace(/[&<>"']/g, function (ch) {
@@ -490,6 +491,29 @@
       }
 
       return ownerName ? ownerName + ' - ' + bank + ' / ' + accountNumber : '';
+    }
+
+    function normalizeBankName(value) {
+      const bank = String(value || '').trim().toUpperCase().replace(/\s+/g, ' ').replace(/^BANK\s+/, '');
+      if (/^(?:BRI|BANK RAKYAT INDONESIA)$/.test(bank)) return 'BRI';
+      if (/^(?:BNI|BANK NEGARA INDONESIA)$/.test(bank)) return 'BNI';
+      return bank;
+    }
+
+    function extractBankName(rawDescription) {
+      const firstSegment = String(rawDescription || '').split(' · ')[0].trim();
+      const match = firstSegment.match(/^(.*?)\s+-\s+([A-Za-z][A-Za-z0-9 ]*?)\s*\/\s*((?:x{3,}\s+\d{4})|[^\s·]+)$/i);
+      return match ? normalizeBankName(match[2]) : '';
+    }
+
+    function getPrimaryBank(kitchen) {
+      const name = String(kitchen || '').trim().toLocaleLowerCase('id-ID');
+      return name === 'cihaur' || name === 'ereng' || name === 'sukaraja' ? 'BRI' : 'BNI';
+    }
+
+    function usesFixedDateFormat(kitchen) {
+      const name = String(kitchen || '').trim().toLocaleLowerCase('id-ID');
+      return name === 'cihaur' || name === 'ereng' || name === 'sukaraja';
     }
 
     function extractGasProducts(rawDescription) {
@@ -707,6 +731,8 @@
           ? [edit.descriptions[0] || '', edit.descriptions[1] || '', edit.descriptions[2] || '']
           : details.descriptions.slice(0, 3);
 
+        const bank = extractBankName(rawDescription);
+        const primaryBank = getPrimaryBank(kitchen);
         parsedCards.push({
           id: cardId,
           sourceLineNo: index + 1,
@@ -714,13 +740,29 @@
           date: date,
           category: details.category,
           title: details.title || details.category,
+          bank: bank,
+          isSecondaryBank: Boolean(bank && bank !== primaryBank),
           isReal: details.isReal,
           descriptions: descriptions,
           amount: Object.prototype.hasOwnProperty.call(edit, 'amount') ? digitsOnly(edit.amount) : amount
         });
       });
 
-      return { cards: parsedCards, ignored: skipped };
+      const primaryBank = getPrimaryBank(kitchen);
+      parsedCards.sort(function (left, right) {
+        const rank = function (card) {
+          if (!card.bank) return 2;
+          return card.bank === primaryBank ? 0 : 1;
+        };
+        const rankDifference = rank(left) - rank(right);
+        if (rankDifference !== 0) return rankDifference;
+        if (rank(left) === 1 && left.bank !== right.bank) {
+          return left.bank.localeCompare(right.bank, 'id');
+        }
+        return left.sourceLineNo - right.sourceLineNo;
+      });
+
+      return { cards: parsedCards, ignored: skipped, kitchen: kitchen };
     }
 
     function persistWorkspace() {
@@ -845,7 +887,9 @@
           '<div class="card-top">' +
             '<div class="number">' + String(index + 1).padStart(2, '0') + '</div>' +
             '<div class="card-head">' +
-              '<div class="card-name-row"><span class="card-category" title="' + escapeHtml(card.title || card.category) + '">' + escapeHtml(card.title || card.category) + '</span></div>' +
+              '<div class="card-name-row"><span class="card-category" title="' + escapeHtml(card.title || card.category) + '">' + escapeHtml(card.title || card.category) + '</span>' +
+              (card.isSecondaryBank ? '<span class="bank-route-badge" title="Bukan rekening utama (' + escapeHtml(card.bank) + '). Pindah ke fitur bank yang sesuai.">BANK ' + escapeHtml(card.bank) + ' · PINDAH FITUR</span>' : '') +
+              '</div>' +
               '<div class="card-context">' + escapeHtml(card.kitchen) + ' <span aria-hidden="true">·</span> ' + escapeHtml(formatOutputDate(card.date)) + '</div>' +
             '</div>' +
             '<span class="status-dot" aria-label="' + escapeHtml(statusLabel) + '" title="' + escapeHtml(statusLabel) + '"></span>' +
@@ -867,6 +911,12 @@
         edits = {};
         ignoredLines = [];
         demoMode = false;
+        decodedKitchen = '';
+        useSpacedDateFormat = false;
+        dateFormatBtn.textContent = 'DD-MMM-YYYY';
+        dateFormatBtn.hidden = true;
+        dateFormatBtn.disabled = false;
+        dateFormatBtn.title = 'Ganti format tanggal';
         renderCards();
         setDecodeNotice('');
         persistWorkspace();
@@ -882,7 +932,18 @@
 
       decodedSource = cleanedSource;
       demoMode = Boolean(isDemo);
-      const parsed = parseOutput(cleanedSource);
+      let parsed = parseOutput(cleanedSource);
+      if (usesFixedDateFormat(parsed.kitchen) && useSpacedDateFormat) {
+        useSpacedDateFormat = false;
+        parsed = parseOutput(cleanedSource);
+      }
+      decodedKitchen = parsed.kitchen || '';
+      dateFormatBtn.hidden = !decodedKitchen || decodedKitchen === 'Dapur tidak terdeteksi' || parsed.cards.length === 0;
+      dateFormatBtn.disabled = usesFixedDateFormat(decodedKitchen);
+      dateFormatBtn.textContent = useSpacedDateFormat ? 'DD MMM YYYY' : 'DD-MMM-YYYY';
+      dateFormatBtn.title = dateFormatBtn.disabled
+        ? 'Format tetap DD-MMM-YYYY untuk Cihaur dan Sukaraja (rekening utama BRI).'
+        : 'Ganti format tanggal';
       cards = parsed.cards;
       ignoredLines = parsed.ignored;
       const validIds = new Set(cards.map(function (card) { return card.id; }));
@@ -951,6 +1012,7 @@
     }
 
     dateFormatBtn.addEventListener('click', function () {
+      if (usesFixedDateFormat(decodedKitchen) || dateFormatBtn.hidden) return;
       useSpacedDateFormat = !useSpacedDateFormat;
       dateFormatBtn.textContent = useSpacedDateFormat ? 'DD MMM YYYY' : 'DD-MMM-YYYY';
       cards = cards.map(function (card) {
@@ -962,6 +1024,14 @@
         edits[card.id] = { descriptions: updated.descriptions.slice(), amount: updated.amount };
         return updated;
       });
+      // Keep copied values aligned with reformatted text so progress is preserved.
+      copiedFieldsByCard = Object.fromEntries(Object.entries(copiedFieldsByCard).map(function (entry) {
+        const copied = {};
+        Object.entries(entry[1] || {}).forEach(function (field) {
+          copied[field[0]] = field[0] === 'amount' ? field[1] : formatDateInText(field[1]);
+        });
+        return [entry[0], copied];
+      }));
       renderCards();
       persistWorkspace();
     });
