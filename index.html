@@ -535,10 +535,16 @@
         return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
+      // Treat the legacy SEWA SPPG prefix and the new INSENTIF FASILITAS SPPG
+      // prefix as the same transaction for Catatan output. Always use the new wording.
       if (/^(?:Sewa SPPG|Insentif Fasilitas SPPG)\s*:/i.test(source)) {
-        const isFasilitas = /^Insentif Fasilitas SPPG\s*:/i.test(source);
-        const label = isFasilitas ? 'Pembayaran Insentif Fasilitas SPPG' : 'Pembayaran Sewa SPPG';
-        return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+        const label = 'Pembayaran Insentif Fasilitas SPPG';
+        return {
+          category: label,
+          title: targetAccount || label,
+          isReal: false,
+          descriptions: buildDescriptionFields(label, date)
+        };
       }
 
       if (/^Sewa Kendaraan\b/i.test(source)) {
