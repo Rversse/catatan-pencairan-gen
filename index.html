@@ -425,6 +425,64 @@
       return ownerName ? ownerName + ' - ' + bank + ' / ' + accountNumber : '';
     }
 
+    function extractGasProducts(rawDescription) {
+      const firstSegment = String(rawDescription || '').split(' · ')[0].trim();
+      const colonIndex = firstSegment.indexOf(':');
+      if (colonIndex < 0 || !/^GAS$/i.test(firstSegment.slice(0, colonIndex).trim())) return [];
+
+      const targetText = firstSegment.slice(colonIndex + 1).trim();
+      const match = targetText.match(/^(.*?)\s-\s([A-Z][A-Z0-9 ]*)\s\/\s([^\s]+)$/i);
+      if (!match) return [];
+
+      // Maker GAS detail uses "account owner / gas description - BANK / account".
+      const detailsSeparator = match[1].indexOf(' / ');
+      if (detailsSeparator < 0) return [];
+
+      return match[1].slice(detailsSeparator + 3)
+        .split(',')
+        .map(function (item) { return item.trim(); })
+        .filter(Boolean);
+    }
+
+    function buildGasDescriptionFields(products, date) {
+      const dateText = hasUsableDate(date) ? String(date).trim() : '';
+      const items = (products || []).map(function (item) { return String(item || '').trim(); }).filter(Boolean);
+      let label = 'Pembayaran Gas';
+
+      // Avoid repeating the word "Gas" when the Maker detail already starts with it.
+      if (items.length && /^Gas(?:\s|$)/i.test(items[0])) {
+        const gasDetail = items.shift().replace(/^Gas\b/i, '').trim();
+        if (gasDetail) label += ' ' + gasDetail;
+      }
+
+      const segments = [label].concat(items);
+      if (dateText) segments.push(dateText);
+
+      const fields = ['', '', ''];
+      let fieldIndex = 0;
+
+      segments.forEach(function (segment) {
+        splitTextAtLimit(segment, MAX_DESCRIPTION_LENGTH).forEach(function (chunk) {
+          if (fieldIndex >= fields.length || !chunk) return;
+
+          if (!fields[fieldIndex]) {
+            fields[fieldIndex] = chunk;
+            return;
+          }
+
+          const candidate = fields[fieldIndex] + ', ' + chunk;
+          if (candidate.length <= MAX_DESCRIPTION_LENGTH) {
+            fields[fieldIndex] = candidate;
+          } else {
+            fieldIndex += 1;
+            if (fieldIndex < fields.length) fields[fieldIndex] = chunk;
+          }
+        });
+      });
+
+      return fields;
+    }
+
     function describeTransaction(rawDescription, kitchen, date) {
       const source = String(rawDescription || '').trim();
       const normalizedKitchen = String(kitchen || '').trim().toLocaleLowerCase('id-ID');
@@ -456,7 +514,13 @@
 
       if (/^GAS\s*:/i.test(source)) {
         const label = 'Pembayaran Gas';
-        return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+        const gasProducts = extractGasProducts(source);
+        return {
+          category: label,
+          title: targetAccount || label,
+          isReal: false,
+          descriptions: gasProducts.length ? buildGasDescriptionFields(gasProducts, date) : buildDescriptionFields(label, date)
+        };
       }
 
       if (/^Ops Harian\s*:/i.test(source)) {
