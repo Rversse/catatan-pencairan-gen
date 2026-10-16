@@ -348,39 +348,15 @@
 
     function buildProductDescriptionFields(products, date) {
       const dateText = hasUsableDate(date) ? String(date).trim() : '';
-      const fields = ['', '', ''];
-      let fieldIndex = 0;
-      let current = 'Pembayaran';
+      const items = (products || []).map(function (product) {
+        return String(product || '').trim();
+      }).filter(Boolean);
+      const label = items.length ? 'Pembayaran ' + items.join(', ') : 'Pembayaran Bahan Baku';
+      const combined = dateText ? label + ', ' + dateText : label;
+      const chunks = splitTextAtLimit(combined, MAX_DESCRIPTION_LENGTH);
 
-      (products || []).forEach(function (product) {
-        const item = String(product || '').trim();
-        if (!item) return;
-        const candidate = current ? current + ', ' + item : item;
-
-        if (candidate.length <= MAX_DESCRIPTION_LENGTH) {
-          current = candidate;
-          return;
-        }
-
-        if (current) fields[fieldIndex] = current;
-        fieldIndex += 1;
-        current = item;
-      });
-
-      if (fieldIndex < fields.length && current) fields[fieldIndex] = current;
-
-      if (dateText) {
-        const dateIndex = fields.findIndex(function (field) { return !field; });
-        if (dateIndex >= 0 && (fields[dateIndex] + (fields[dateIndex] ? ', ' : '') + dateText).length <= MAX_DESCRIPTION_LENGTH) {
-          fields[dateIndex] = fields[dateIndex] ? fields[dateIndex] + ', ' + dateText : dateText;
-        } else if (dateIndex >= 0) {
-          fields[dateIndex] = dateText;
-        } else {
-          fields[fields.length - 1] = dateText;
-        }
-      }
-
-      return fields;
+      // The interface has three description fields, each capped at 40 characters.
+      return [chunks[0] || '', chunks[1] || '', chunks[2] || ''];
     }
 
     function extractOtherDescription(rawDescription) {
@@ -440,7 +416,9 @@
 
       return match[1].slice(detailsSeparator + 3)
         .split(',')
-        .map(function (item) { return item.trim(); })
+        .map(function (item) {
+          return item.trim().replace(/\btabung\b/gi, 'tbg');
+        })
         .filter(Boolean);
     }
 
@@ -500,9 +478,9 @@
 
       if (/^RAB\s*:/i.test(source)) {
         const segments = source.split(' · ');
-        // RAB output is "account · products · amount"; exclude the final amount
-        // so the nominal is never treated as a product description.
-        const productText = segments.length > 2 ? segments.slice(1, -1).join(' · ').trim() : '';
+        // parseOutput removes the final " · nominal" before this function runs,
+        // so every segment after the destination account belongs to product details.
+        const productText = segments.length > 1 ? segments.slice(1).join(' · ').trim() : '';
         const products = productText
           ? productText.split(',').map(function (item) { return item.trim(); }).filter(Boolean)
           : [];
