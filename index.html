@@ -293,8 +293,7 @@
     const PAYROLL_KINDS = [
       'Gaji Relawan',
       'Insentif PIC Sekolah',
-      'Insentif PIC Posyandu',
-      'Insentif PIC Yayasan'
+      'Insentif PIC Posyandu'
     ];
 
     function joinNatural(items) {
@@ -574,7 +573,7 @@
 
       if (kinds.length === 1) {
         const label = kinds[0];
-        const usesPaymentPrefix = ['Gaji Relawan', 'Insentif PIC Sekolah', 'Insentif PIC Yayasan'].includes(label);
+        const usesPaymentPrefix = ['Gaji Relawan', 'Insentif PIC Sekolah', 'Insentif PIC Posyandu'].includes(label);
         const descriptionLabel = usesPaymentPrefix ? 'Pembayaran ' + label : label;
         return {
           category: descriptionLabel,
