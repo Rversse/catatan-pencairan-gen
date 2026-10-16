@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0b1220">
+  <link rel="icon" type="image/svg+xml" href="./fav.svg">
+  <link rel="icon" type="image/png" href="./fav.png" sizes="200x200">
+  <link rel="apple-touch-icon" href="./fav.png">
   <title>Catatan Pencairan Maker</title>
   <style>
     :root {
@@ -44,9 +47,10 @@
     .topbar-inner, main { width: min(100% - 28px, 860px); margin: 0 auto; }
     .brand { display:flex; align-items:center; gap:12px; font-weight:800; letter-spacing:.01em; }
     .brand-mark {
-      display:grid; place-items:center; width:36px; height:36px; border-radius:11px;
+      display:grid; place-items:center; width:36px; height:36px; flex:0 0 36px; overflow:hidden; border-radius:11px;
       color:#fff; background:#485bdd; font-size:17px;
     }
+    .brand-mark img { display:block; width:34px; height:34px; object-fit:contain; }
     .brand small { display:block; color:#aeb9d0; font-size:12px; font-weight:500; letter-spacing:.03em; margin-top:1px; }
     main { padding: 18px 0 36px; }
     .panel {
@@ -209,7 +213,7 @@
   <header class="topbar">
     <div class="topbar-inner">
       <div class="brand">
-        <span class="brand-mark">CP</span>
+        <span class="brand-mark"><img src="./fav.svg" alt=""></span>
         <span>Catatan Pencairan Maker</span>
       </div>
     </div>
