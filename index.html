@@ -357,8 +357,11 @@
         }
         const candidate = current ? current + ' ' + word : word;
         if (candidate.length > limit) {
-          chunks.push(current);
-          current = word;
+          // Keep "dan" with the final item instead of leaving it at the end of the previous field.
+          const carryConjunction = /\sdan$/i.test(current);
+          if (carryConjunction) current = current.replace(/\sdan$/i, '');
+          if (current) chunks.push(current);
+          current = carryConjunction ? 'dan ' + word : word;
         } else {
           current = candidate;
         }
