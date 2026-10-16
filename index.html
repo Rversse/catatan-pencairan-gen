@@ -104,6 +104,8 @@
       box-shadow:0 4px 14px rgba(22,34,66,.035); transition:border-color .15s, background .15s, opacity .15s;
     }
     .payment-card.is-done { border-color:#b8e5c9; background:#fbfffc; }
+    .payment-card.is-secondary-bank:not(.is-done) { border:2px solid #3b82f6; box-shadow:0 0 0 1px rgba(59,130,246,.14); }
+    .payment-card.is-secondary-bank:not(.is-done):hover { border-color:#2563eb; }
     .card-top { display:flex; align-items:flex-start; gap:12px; }
     .number {
       display:grid; place-items:center; flex:0 0 39px; height:39px; border-radius:12px;
@@ -494,21 +496,30 @@
     }
 
     function normalizeBankName(value) {
-      const bank = String(value || '').trim().toUpperCase().replace(/\s+/g, ' ').replace(/^BANK\s+/, '');
-      if (/^(?:BRI|BANK RAKYAT INDONESIA)$/.test(bank)) return 'BRI';
-      if (/^(?:BNI|BANK NEGARA INDONESIA)$/.test(bank)) return 'BNI';
-      return bank;
+      const rawBank = String(value || '').trim().toUpperCase().replace(/\s+/g, ' ');
+      if (/^(?:BRI|BANK RAKYAT INDONESIA)$/.test(rawBank)) return 'BRI';
+      if (/^(?:BNI|BANK NEGARA INDONESIA)$/.test(rawBank)) return 'BNI';
+      return rawBank.replace(/^BANK\s+/, '');
     }
 
     function extractBankName(rawDescription) {
       const firstSegment = String(rawDescription || '').split(' · ')[0].trim();
-      const match = firstSegment.match(/^(.*?)\s+-\s+([A-Za-z][A-Za-z0-9 ]*?)\s*\/\s*((?:x{3,}\s+\d{4})|[^\s·]+)$/i);
-      return match ? normalizeBankName(match[2]) : '';
+      const slashIndex = firstSegment.lastIndexOf(' / ');
+      if (slashIndex < 0) return '';
+      const bankSeparatorIndex = firstSegment.lastIndexOf(' - ', slashIndex);
+      if (bankSeparatorIndex < 0) return '';
+      const bankText = firstSegment.slice(bankSeparatorIndex + 3, slashIndex).trim();
+      return normalizeBankName(bankText);
     }
 
     function getPrimaryBank(kitchen) {
       const name = String(kitchen || '').trim().toLocaleLowerCase('id-ID');
-      return name === 'cihaur' || name === 'ereng' || name === 'sukaraja' ? 'BRI' : 'BNI';
+      if (name === 'cihaur' || name === 'sukaraja') return 'BRI';
+      if ([
+        'cikondang', 'cipetir', 'kertajadi', 'cisepat', 'campakamulya',
+        'cibaregbeg', 'cimanggu', 'sukaraharja', 'warungbitung'
+      ].includes(name)) return 'BNI';
+      return '';
     }
 
     function usesFixedDateFormat(kitchen) {
@@ -741,7 +752,7 @@
           category: details.category,
           title: details.title || details.category,
           bank: bank,
-          isSecondaryBank: Boolean(bank && bank !== primaryBank),
+          isSecondaryBank: Boolean(primaryBank && bank && bank !== primaryBank),
           isReal: details.isReal,
           descriptions: descriptions,
           amount: Object.prototype.hasOwnProperty.call(edit, 'amount') ? digitsOnly(edit.amount) : amount
