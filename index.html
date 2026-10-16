@@ -352,10 +352,25 @@
     }
 
     function splitTextAtLimit(text, limit) {
+      // Nama bahan majemuk dianggap satu token agar tidak terbelah antar-deskripsi.
+      // "Daging" dipasangkan dengan kata berikutnya untuk mencakup variasi jenis daging.
       const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+      const atomicWords = [];
+      for (let index = 0; index < words.length; index += 1) {
+        const word = words[index];
+        const normalized = word.replace(/^[,]+|[,]+$/g, '').toLocaleLowerCase('id-ID');
+        const next = words[index + 1];
+        const nextNormalized = next ? next.replace(/^[,]+|[,]+$/g, '').toLocaleLowerCase('id-ID') : '';
+        if (['telur', 'daging'].includes(normalized) && next) {
+          atomicWords.push(word + ' ' + next);
+          index += 1;
+        } else {
+          atomicWords.push(word);
+        }
+      }
       const chunks = [];
       let current = '';
-      words.forEach(function (word) {
+      atomicWords.forEach(function (word) {
         if (word.length > limit) {
           if (current) { chunks.push(current); current = ''; }
           // A single unbroken token cannot be split without corrupting the word.
@@ -524,7 +539,16 @@
 
     function usesFixedDateFormat(kitchen) {
       const name = String(kitchen || '').trim().toLocaleLowerCase('id-ID');
-      return name === 'cihaur' || name === 'ereng' || name === 'sukaraja';
+      return name === 'cihaur' || name === 'sukaraja';
+    }
+
+    function getFirstRowKitchen(source) {
+      const firstLine = String(source || '').split(/\r?\n/).find(function (line) {
+        return line.trim() !== '';
+      });
+      if (!firstLine || firstLine.includes(' · ')) return '';
+      const headerMatch = firstLine.trim().match(/^(.*),\s*(\d{2}[- ](?:Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)[- ]\d{4})$/i);
+      return headerMatch ? headerMatch[1].trim() : '';
     }
 
     function extractGasProducts(rawDescription) {
@@ -942,7 +966,7 @@
       decodedSource = cleanedSource;
       demoMode = Boolean(isDemo);
       let parsed = parseOutput(cleanedSource);
-      decodedKitchen = parsed.kitchen || '';
+      decodedKitchen = getFirstRowKitchen(cleanedSource);
       if (!usesFixedDateFormat(decodedKitchen) && useSpacedDateFormat) {
         useSpacedDateFormat = false;
         parsed = parseOutput(cleanedSource);
@@ -1165,6 +1189,9 @@
         edits = saved.edits && typeof saved.edits === 'object' ? saved.edits : {};
         sourceInput.value = decodedSource;
         const parsed = parseOutput(decodedSource);
+        decodedKitchen = getFirstRowKitchen(decodedSource);
+        dateFormatBtn.hidden = !usesFixedDateFormat(decodedKitchen) || parsed.cards.length === 0;
+        dateFormatBtn.textContent = useSpacedDateFormat ? 'DD MMM YYYY' : 'DD-MMM-YYYY';
         cards = parsed.cards;
         ignoredLines = parsed.ignored;
         const validIds = new Set(cards.map(function (card) { return card.id; }));
