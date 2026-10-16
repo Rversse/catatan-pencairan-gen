@@ -217,7 +217,7 @@
 
   <main>
         <section class="panel" aria-labelledby="inputHeading">
-      <div class="panel-heading"><h2 id="inputHeading">Input Data</h2></div>
+      <div class="panel-heading"><h2 id="inputHeading">Input Data</h2><button class="btn btn-secondary" id="dateFormatBtn" type="button" aria-label="Ganti format tanggal">DD-MMM-YYYY</button></div>
       <textarea id="sourceInput" spellcheck="false"></textarea>
       <div class="input-tools">
         <div class="button-row">
@@ -261,6 +261,7 @@
 
     const STORAGE_KEY = 'catatan-pencairan-gen-decoder-prototype-v1';
     const sourceInput = document.getElementById('sourceInput');
+    const dateFormatBtn = document.getElementById('dateFormatBtn');
     const decodeBtn = document.getElementById('decodeBtn');
     const copyInputBtn = document.getElementById('copyInputBtn');
     const clearBtn = document.getElementById('clearBtn');
@@ -284,6 +285,7 @@
     let ignoredLines = [];
     let demoMode = false;
     let sourcePending = false;
+    let useSpacedDateFormat = false;
 
     function escapeHtml(value) {
       return String(value).replace(/[&<>"']/g, function (ch) {
@@ -311,7 +313,35 @@
       const values = items.filter(Boolean);
       if (values.length <= 1) return values[0] || '';
       if (values.length === 2) return values[0] + ' dan ' + values[1];
-      return values.slice(0, -1).join(', ') + ' dan ' + values[values.length - 1];
+      return values.slice(0, -1).join(', ') + ', dan ' + values[values.length - 1];
+    }
+
+    // Maker emits two products with "dan" and three or more with ", dan".
+    function parseNaturalProductList(text) {
+      const source = String(text || '').trim();
+      if (!source) return [];
+      const commaParts = source.split(',').map(function (item) { return item.trim(); }).filter(Boolean);
+      if (commaParts.length > 1) {
+        commaParts[commaParts.length - 1] = commaParts[commaParts.length - 1].replace(/^dan\s+/i, '').trim();
+        return commaParts.filter(Boolean);
+      }
+      const twoItems = source.match(/^(.+?)\s+dan\s+(.+)$/i);
+      return twoItems ? [twoItems[1].trim(), twoItems[2].trim()] : [source];
+    }
+
+    function formatOutputDate(date) {
+      const value = String(date || '').trim();
+      const match = value.match(/^(\d{2})[- ](Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)[- ](\d{4})$/i);
+      if (!match) return value;
+      return useSpacedDateFormat
+        ? match[1] + ' ' + match[2] + ' ' + match[3]
+        : match[1] + '-' + match[2] + '-' + match[3];
+    }
+
+    function formatDateInText(text) {
+      return String(text || '').replace(/\b(\d{2})[- ](Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)[- ](\d{4})\b/gi, function (_match, day, month, year) {
+        return useSpacedDateFormat ? day + ' ' + month + ' ' + year : day + '-' + month + '-' + year;
+      });
     }
 
     function splitTextAtLimit(text, limit) {
@@ -321,9 +351,8 @@
       words.forEach(function (word) {
         if (word.length > limit) {
           if (current) { chunks.push(current); current = ''; }
-          for (let index = 0; index < word.length; index += limit) {
-            chunks.push(word.slice(index, index + limit));
-          }
+          // A single unbroken token cannot be split without corrupting the word.
+          chunks.push(word);
           return;
         }
         const candidate = current ? current + ' ' + word : word;
@@ -344,7 +373,7 @@
 
     function buildDescriptionFields(label, date) {
       const cleanLabel = String(label || '').trim();
-      const dateText = hasUsableDate(date) ? String(date).trim() : '';
+      const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
       if (!dateText) return [cleanLabel, '', ''];
 
       const combined = cleanLabel + ', ' + dateText;
@@ -358,11 +387,11 @@
     }
 
     function buildProductDescriptionFields(products, date) {
-      const dateText = hasUsableDate(date) ? String(date).trim() : '';
+      const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
       const items = (products || []).map(function (product) {
         return String(product || '').trim();
       }).filter(Boolean);
-      const label = items.length ? 'Pembayaran ' + items.join(', ') : 'Pembayaran Bahan Baku';
+      const label = items.length ? 'Pembayaran ' + joinNatural(items) : 'Pembayaran Bahan Baku';
       const combined = dateText ? label + ', ' + dateText : label;
       const chunks = splitTextAtLimit(combined, MAX_DESCRIPTION_LENGTH);
 
@@ -381,7 +410,7 @@
         fields[index] = index === 0 ? 'Pembayaran ' + item : item;
       });
 
-      const dateText = hasUsableDate(date) ? String(date).trim() : '';
+      const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
       if (dateText && fieldCount > 0) {
         const lastIndex = fieldCount - 1;
         const combined = fields[lastIndex] + ', ' + dateText;
@@ -464,7 +493,7 @@
     }
 
     function buildGasDescriptionFields(products, date) {
-      const dateText = hasUsableDate(date) ? String(date).trim() : '';
+      const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
       const items = (products || []).map(function (item) { return String(item || '').trim(); }).filter(Boolean);
       let label = 'Pembayaran Gas';
 
@@ -521,9 +550,7 @@
         // parseOutput removes the final " · nominal" before this function runs,
         // so every segment after the destination account belongs to product details.
         const productText = segments.length > 1 ? segments.slice(1).join(' · ').trim() : '';
-        const products = productText
-          ? productText.split(',').map(function (item) { return item.trim(); }).filter(Boolean)
-          : [];
+        const products = parseNaturalProductList(productText);
         const label = products.length
           ? 'Pembayaran ' + joinNatural(products)
           : 'Pembayaran Bahan Baku';
@@ -621,7 +648,7 @@
         const line = rawLine.trim();
         if (!line) return;
 
-        const headerMatch = line.match(/^(.*),\s*(\d{2}-(?:Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)-\d{4})$/i);
+        const headerMatch = line.match(/^(.*),\s*(\d{2}[- ](?:Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)[- ]\d{4})$/i);
         if (headerMatch && !line.includes(' · ')) {
           kitchen = headerMatch[1].trim() || kitchen;
           date = headerMatch[2];
@@ -697,16 +724,27 @@
       return String(card.descriptions[descriptionIndex] || '');
     }
 
+    function getRequiredFieldKeys(card) {
+      return REQUIRED_FIELD_KEYS.filter(function (fieldKey) {
+        return getCardFieldValue(card, fieldKey).trim() !== '';
+      });
+    }
+
     function getCopiedFieldCount(card) {
       const copied = copiedFieldsByCard[card.id] || {};
-      return REQUIRED_FIELD_KEYS.filter(function (fieldKey) {
+      return getRequiredFieldKeys(card).filter(function (fieldKey) {
         return Object.prototype.hasOwnProperty.call(copied, fieldKey) &&
           copied[fieldKey] === getCardFieldValue(card, fieldKey);
       }).length;
     }
 
     function isCardComplete(card) {
-      return getCopiedFieldCount(card) === REQUIRED_FIELD_KEYS.length;
+      const requiredKeys = getRequiredFieldKeys(card);
+      const copied = copiedFieldsByCard[card.id] || {};
+      return requiredKeys.every(function (fieldKey) {
+        return Object.prototype.hasOwnProperty.call(copied, fieldKey) &&
+          copied[fieldKey] === getCardFieldValue(card, fieldKey);
+      });
     }
 
     function refreshCardStatus(card, cardEl) {
@@ -721,7 +759,7 @@
       if (status) {
         const label = done
           ? 'Pencairan Selesai'
-          : copiedCount + '/' + REQUIRED_FIELD_KEYS.length + ' field tersalin';
+          : copiedCount + '/' + getRequiredFieldKeys(card).length + ' field tersalin';
         status.setAttribute('aria-label', label);
         status.title = label;
       }
@@ -758,7 +796,7 @@
         const copiedCount = getCopiedFieldCount(card);
         const statusLabel = done
           ? 'Pencairan Selesai'
-          : copiedCount + '/' + REQUIRED_FIELD_KEYS.length + ' field tersalin';
+          : copiedCount + '/' + getRequiredFieldKeys(card).length + ' field tersalin';
         const descriptionFields = card.descriptions.map(function (value, descriptionIndex) {
           const fieldId = 'desc-' + card.id + '-' + descriptionIndex;
           const charCount = String(value || '').length;
@@ -787,7 +825,7 @@
             '<div class="number">' + String(index + 1).padStart(2, '0') + '</div>' +
             '<div class="card-head">' +
               '<div class="card-name-row"><span class="card-category" title="' + escapeHtml(card.title || card.category) + '">' + escapeHtml(card.title || card.category) + '</span></div>' +
-              '<div class="card-context">' + escapeHtml(card.kitchen) + ' <span aria-hidden="true">·</span> ' + escapeHtml(card.date) + '</div>' +
+              '<div class="card-context">' + escapeHtml(card.kitchen) + ' <span aria-hidden="true">·</span> ' + escapeHtml(formatOutputDate(card.date)) + '</div>' +
             '</div>' +
             '<span class="status-dot" aria-label="' + escapeHtml(statusLabel) + '" title="' + escapeHtml(statusLabel) + '"></span>' +
           '</div>' +
@@ -871,10 +909,11 @@
     async function copyToClipboard(text, field, card, fieldKey, cardEl) {
       if (sourcePending) return;
       const value = String(text == null ? '' : text);
+      // Empty fields are optional: there is nothing to copy or acknowledge.
+      if (!value.trim()) return;
 
       try {
-        // Empty description fields count as acknowledged fields, but there is no text to copy.
-        if (value !== '') await writeClipboard(value);
+        await writeClipboard(value);
         if (!copiedFieldsByCard[card.id]) copiedFieldsByCard[card.id] = {};
         copiedFieldsByCard[card.id][fieldKey] = value;
         field.classList.add('copied-field');
@@ -889,6 +928,22 @@
         setDecodeNotice('Browser gagal mengakses clipboard. Coba gunakan HTTPS atau salin secara manual.');
       }
     }
+
+    dateFormatBtn.addEventListener('click', function () {
+      useSpacedDateFormat = !useSpacedDateFormat;
+      dateFormatBtn.textContent = useSpacedDateFormat ? 'DD MMM YYYY' : 'DD-MMM-YYYY';
+      cards = cards.map(function (card) {
+        const updated = {
+          ...card,
+          date: formatDateInText(card.date),
+          descriptions: card.descriptions.map(formatDateInText)
+        };
+        edits[card.id] = { descriptions: updated.descriptions.slice(), amount: updated.amount };
+        return updated;
+      });
+      renderCards();
+      persistWorkspace();
+    });
 
     sourceInput.addEventListener('input', function () {
       sourcePending = sourceInput.value.trim() !== decodedSource;
