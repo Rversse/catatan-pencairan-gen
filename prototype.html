@@ -409,6 +409,13 @@
       const bank = match[2].trim().toUpperCase();
       const accountNumber = match[3].trim();
 
+      // GAS details use "account name / item notes - BANK / account".
+      // Keep only the account name as the destination title.
+      if (/^GAS$/i.test(prefix)) {
+        const detailsSeparator = ownerName.indexOf(' / ');
+        if (detailsSeparator >= 0) ownerName = ownerName.slice(0, detailsSeparator).trim();
+      }
+
       // Lain-lain rows are "need - account owner - BANK / account".
       if (/^Lain-lain$/i.test(prefix)) {
         const ownerSegments = ownerName.split(/\s-\s/).filter(Boolean);
@@ -435,7 +442,9 @@
 
       if (/^RAB\s*:/i.test(source)) {
         const segments = source.split(' · ');
-        const productText = segments.length > 1 ? segments.slice(1).join(' · ').trim() : '';
+        // RAB output is "account · products · amount"; exclude the final amount
+        // so the nominal is never treated as a product description.
+        const productText = segments.length > 2 ? segments.slice(1, -1).join(' · ').trim() : '';
         const products = productText
           ? productText.split(',').map(function (item) { return item.trim(); }).filter(Boolean)
           : [];
@@ -472,9 +481,13 @@
 
       const colonIndex = source.indexOf(':');
       const prefix = colonIndex >= 0 ? source.slice(0, colonIndex).trim() : '';
-      const listedPrefixKinds = prefix.split(/\s*,\s*/).filter(Boolean);
+      const listedPrefixKinds = new Set(
+        prefix.split(/\s*,\s*/).filter(Boolean).map(function (kind) {
+          return kind.toLocaleLowerCase('id-ID');
+        })
+      );
       const kinds = PAYROLL_KINDS.filter(function (kind) {
-        return listedPrefixKinds.includes(kind);
+        return listedPrefixKinds.has(kind.toLocaleLowerCase('id-ID'));
       });
 
       if (kinds.length > 0) {
