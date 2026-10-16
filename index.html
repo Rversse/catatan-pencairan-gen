@@ -395,8 +395,22 @@
         return String(product || '').trim();
       }).filter(Boolean);
       const label = items.length ? 'Pembayaran ' + joinNatural(items) : 'Pembayaran Bahan Baku';
-      const combined = dateText ? label + ', ' + dateText : label;
-      const chunks = splitTextAtLimit(combined, MAX_DESCRIPTION_LENGTH);
+      const chunks = splitTextAtLimit(label, MAX_DESCRIPTION_LENGTH);
+
+      // Keep the date as one value; a spaced date must never split between fields.
+      if (dateText) {
+        const lastIndex = chunks.length - 1;
+        if (lastIndex >= 0) {
+          const combinedLast = chunks[lastIndex] + ', ' + dateText;
+          if (combinedLast.length <= MAX_DESCRIPTION_LENGTH) {
+            chunks[lastIndex] = combinedLast;
+          } else {
+            chunks.push(dateText);
+          }
+        } else {
+          chunks.push(dateText);
+        }
+      }
 
       // The interface has three description fields, each capped at 40 characters.
       return [chunks[0] || '', chunks[1] || '', chunks[2] || ''];
