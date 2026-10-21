@@ -313,8 +313,39 @@
     const PAYROLL_KINDS = [
       'Gaji Relawan',
       'Insentif PIC Sekolah',
-      'Insentif PIC Posyandu'
+      'Insentif Kader'
     ];
+
+    const LOWERCASE_CONNECTORS = new Set([
+      'dan', 'atau', 'di', 'ke', 'dari', 'untuk', 'dengan', 'yang',
+      'serta', 'pada', 'dalam', 'oleh', 'karena', 'sebagai', 'hingga',
+      'sampai', 'tentang', 'antara', 'agar', 'supaya'
+    ]);
+
+    function titleCaseIndonesian(value) {
+      const words = String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('id-ID').split(' ');
+      return words.map(function (word, index) {
+        if (!word) return word;
+        return word.split('-').map(function (part, partIndex) {
+          if (!part) return part;
+          if (index > 0 && partIndex === 0 && LOWERCASE_CONNECTORS.has(part)) return part;
+          return part.charAt(0).toLocaleUpperCase('id-ID') + part.slice(1);
+        }).join('-');
+      }).join(' ')
+        .replace(/\bSppg\b/gi, 'SPPG')
+        .replace(/\bPic\b/gi, 'PIC')
+        .replace(/\bBri\b/gi, 'BRI')
+        .replace(/\bBni\b/gi, 'BNI');
+    }
+
+    function normalizePayrollKind(kind) {
+      const value = String(kind || '').trim().toLocaleLowerCase('id-ID').replace(/\s+/g, ' ');
+      if (value === 'insentif pic posyandu') return 'Insentif Kader';
+      if (value === 'insentif fasilitas sppg' || value === 'insentif sppg') return 'Insentif SPPG';
+      return PAYROLL_KINDS.find(function (item) {
+        return item.toLocaleLowerCase('id-ID') === value;
+      }) || titleCaseIndonesian(kind);
+    }
 
     function joinNatural(items) {
       const values = items.filter(Boolean);
@@ -655,8 +686,8 @@
 
       // Treat the legacy SEWA SPPG prefix and the new INSENTIF FASILITAS SPPG
       // prefix as the same transaction for Catatan output. Always use the new wording.
-      if (/^(?:Sewa SPPG|Insentif Fasilitas SPPG)\s*:/i.test(source)) {
-        const label = 'Pembayaran Insentif Fasilitas SPPG';
+      if (/^(?:Sewa SPPG|Insentif Fasilitas SPPG|Insentif SPPG)\s*:/i.test(source)) {
+        const label = 'Insentif SPPG';
         return {
           category: label,
           title: targetAccount || label,
@@ -671,7 +702,7 @@
       }
 
       if (/^Lain-lain\s*:/i.test(source)) {
-        const label = extractOtherDescription(source);
+        const label = titleCaseIndonesian(extractOtherDescription(source));
         return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
@@ -679,7 +710,7 @@
       const prefix = colonIndex >= 0 ? source.slice(0, colonIndex).trim() : '';
       const listedPrefixKinds = new Set(
         prefix.split(/\s*,\s*/).filter(Boolean).map(function (kind) {
-          return kind.toLocaleLowerCase('id-ID');
+          return normalizePayrollKind(kind).toLocaleLowerCase('id-ID');
         })
       );
       const kinds = PAYROLL_KINDS.filter(function (kind) {
@@ -698,7 +729,7 @@
 
       if (kinds.length === 1) {
         const label = kinds[0];
-        const usesPaymentPrefix = ['Gaji Relawan', 'Insentif PIC Sekolah', 'Insentif PIC Posyandu'].includes(label);
+        const usesPaymentPrefix = ['Gaji Relawan', 'Insentif PIC Sekolah', 'Insentif Kader'].includes(label);
         const descriptionLabel = usesPaymentPrefix ? 'Pembayaran ' + label : label;
         return {
           category: descriptionLabel,
@@ -708,7 +739,7 @@
         };
       }
 
-      const fallbackLabel = prefix || 'Pembayaran';
+      const fallbackLabel = titleCaseIndonesian(prefix || 'Pembayaran');
       return {
         category: fallbackLabel,
         title: targetAccount || fallbackLabel,
