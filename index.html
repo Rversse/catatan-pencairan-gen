@@ -328,8 +328,13 @@
         if (!word) return word;
         return word.split('-').map(function (part, partIndex) {
           if (!part) return part;
-          if (index > 0 && partIndex === 0 && LOWERCASE_CONNECTORS.has(part)) return part;
-          return part.charAt(0).toLocaleUpperCase('id-ID') + part.slice(1);
+          const match = part.match(/^([^\p{L}\p{N}]*)([\p{L}\p{N}]+)([^\p{L}\p{N}]*)$/u);
+          if (!match) return part;
+          const leading = match[1];
+          const core = match[2];
+          const trailing = match[3];
+          if (index > 0 && partIndex === 0 && LOWERCASE_CONNECTORS.has(core)) return leading + core + trailing;
+          return leading + core.charAt(0).toLocaleUpperCase('id-ID') + core.slice(1) + trailing;
         }).join('-');
       }).join(' ')
         .replace(/\bSppg\b/gi, 'SPPG')
