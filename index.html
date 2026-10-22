@@ -527,7 +527,7 @@
       if (!match) return targetText;
 
       let ownerName = match[1].trim();
-      const bank = normalizeBankName(match[2].trim());
+      const bank = match[2].trim().toUpperCase();
       const accountNumber = match[3].trim();
 
       // GAS details use "account name / item notes - BANK / account".
@@ -550,7 +550,7 @@
         if (supplierLabel && supplierLabel[1].trim() && supplierLabel[2].trim()) {
           const businessName = supplierLabel[1].trim();
           const supplierOwner = supplierLabel[2].trim();
-          return supplierOwner + ' - ' + businessName + ' - ' + bank + ' / ' + accountNumber;
+          return supplierOwner + ' - ' + businessName + ' - ' + normalizeBankName(bank) + ' / ' + accountNumber;
         }
       }
 
