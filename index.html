@@ -66,11 +66,11 @@
       font-size:11px; font-weight:750;
     }
     .local-pill:before { content:""; width:7px; height:7px; border-radius:50%; background:#718096; }
-    textarea, input[type="text"] {
+    textarea, input[type="text"], input[type="password"] {
       display:block; width:100%; border:1px solid #cfd7e5; border-radius:11px; background:#fff;
       color:var(--text); padding:12px 13px; outline:none; transition:border-color .15s, box-shadow .15s;
     }
-    textarea:focus, input[type="text"]:focus { border-color:#6c7bea; box-shadow:0 0 0 3px rgba(72,91,221,.13); }
+    textarea:focus, input[type="text"]:focus, input[type="password"]:focus { border-color:#6c7bea; box-shadow:0 0 0 3px rgba(72,91,221,.13); }
     #sourceInput { min-height:184px; resize:vertical; font: 12px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     .input-tools { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:12px; }
     .button-row { display:flex; gap:8px; flex-wrap:wrap; }
@@ -194,6 +194,17 @@
     .copy-input-help { color:var(--muted); font-size:11px; margin-top:6px; }
     .stats { margin:18px 0 11px; }
     .cards { gap:10px; }
+    .input-heading-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; }
+    .supplier-status { color:var(--muted); font-size:11px; font-weight:750; }
+    .supplier-status.is-connected { color:var(--green); }
+    .supplier-status.is-warning { color:var(--amber); }
+    .supplier-login-panel { margin:0 0 12px; padding:12px; border:1px solid var(--line); border-radius:12px; background:#f8faff; }
+    #supplierLoginPanel[hidden] { display:none !important; }
+    .supplier-login-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .supplier-login-grid label { display:block; color:#4b566d; font-size:11px; font-weight:800; }
+    .supplier-login-grid input { margin-top:5px; padding:9px 10px; font-size:12px; }
+    .supplier-login-actions { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .supplier-login-message { color:var(--muted); font-size:11px; }
     @media (max-width:900px) { .fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     @media (max-width:620px) {
       .topbar { padding:13px 0; }
@@ -205,6 +216,9 @@
       .number { width:28px; height:28px; }
       .status-dot { grid-column:2; justify-self:end; }
       .input-tools { align-items:stretch; }
+      .panel-heading { flex-direction:column; align-items:stretch; }
+      .input-heading-actions { justify-content:space-between; }
+      .supplier-login-grid { grid-template-columns:1fr; }
       .button-row { width:100%; }
       .button-row .btn { flex:1; }
       .stats-actions { width:100%; justify-content:space-between; }
@@ -223,7 +237,34 @@
 
   <main>
         <section class="panel" aria-labelledby="inputHeading">
-      <div class="panel-heading"><h2 id="inputHeading">Input Data</h2><button class="btn btn-secondary" id="dateFormatBtn" type="button" aria-label="Ganti format tanggal" hidden>DD-MMM-YYYY</button></div>
+      <div class="panel-heading">
+        <h2 id="inputHeading">Input Data</h2>
+        <div class="input-heading-actions">
+          <span id="supplierConnectionStatus" class="supplier-status">Owner supplier: belum terhubung</span>
+          <button class="btn btn-secondary" id="connectSupplierBtn" type="button">Hubungkan SIM-SPPG</button>
+          <button class="btn btn-secondary" id="disconnectSupplierBtn" type="button" hidden>Putuskan</button>
+          <button class="btn btn-secondary" id="dateFormatBtn" type="button" aria-label="Ganti format tanggal" hidden>DD-MMM-YYYY</button>
+        </div>
+      </div>
+      <div class="supplier-login-panel" id="supplierLoginPanel" hidden>
+        <form id="supplierLoginForm">
+          <div class="supplier-login-grid">
+            <label for="supplierUsername">Username SIM-SPPG
+              <input id="supplierUsername" type="text" autocomplete="username" required>
+            </label>
+            <label for="supplierPin">PIN SIM-SPPG
+              <input id="supplierPin" type="password" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" autocomplete="current-password" required>
+            </label>
+          </div>
+          <div class="supplier-login-actions">
+            <span id="supplierLoginMessage" class="supplier-login-message">Login untuk mencocokkan nomor rekening dengan master supplier.</span>
+            <div class="button-row">
+              <button class="btn btn-secondary" id="cancelSupplierLoginBtn" type="button">Batal</button>
+              <button class="btn btn-primary" id="submitSupplierLoginBtn" type="submit">Hubungkan</button>
+            </div>
+          </div>
+        </form>
+      </div>
       <textarea id="sourceInput" spellcheck="false"></textarea>
       <div class="input-tools">
         <div class="button-row">
@@ -262,9 +303,12 @@
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0"></script>
   <script>
     'use strict';
 
+    const SUPABASE_URL = 'https://odtrmvghellmcefdwzfx.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_ea7kVpdQ0GPA4kr-JKgsKw_VCt9WfMY';
     const STORAGE_KEY = 'catatan-pencairan-gen-decoder-prototype-v1';
     const sourceInput = document.getElementById('sourceInput');
     const dateFormatBtn = document.getElementById('dateFormatBtn');
@@ -281,6 +325,33 @@
     const pendingNotice = document.getElementById('pendingNotice');
     const ignoredPanel = document.getElementById('ignoredPanel');
     const ignoredList = document.getElementById('ignoredList');
+    const supplierConnectionStatus = document.getElementById('supplierConnectionStatus');
+    const connectSupplierBtn = document.getElementById('connectSupplierBtn');
+    const disconnectSupplierBtn = document.getElementById('disconnectSupplierBtn');
+    const supplierLoginPanel = document.getElementById('supplierLoginPanel');
+    const supplierLoginForm = document.getElementById('supplierLoginForm');
+    const supplierUsernameInput = document.getElementById('supplierUsername');
+    const supplierPinInput = document.getElementById('supplierPin');
+    const supplierLoginMessage = document.getElementById('supplierLoginMessage');
+    const submitSupplierLoginBtn = document.getElementById('submitSupplierLoginBtn');
+    const cancelSupplierLoginBtn = document.getElementById('cancelSupplierLoginBtn');
+
+    let supplierSupabaseClient = null;
+    let supplierAccountLookup = new Map();
+    let supplierLookupReady = false;
+    try {
+      if (window.supabase && typeof window.supabase.createClient === 'function') {
+        supplierSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: false
+          }
+        });
+      }
+    } catch (error) {
+      supplierSupabaseClient = null;
+    }
 
     let decodedSource = '';
     let cards = [];
@@ -563,6 +634,118 @@
       return normalizeBankName(bankText);
     }
 
+    function extractAccountNumber(rawDescription) {
+      const firstSegment = String(rawDescription || '').split(' · ')[0].trim();
+      const slashIndex = firstSegment.lastIndexOf(' / ');
+      if (slashIndex < 0) return '';
+      const accountText = firstSegment.slice(slashIndex + 3).trim();
+      const match = accountText.match(/^([^\s]+)/);
+      return match ? match[1].trim() : '';
+    }
+
+    function normalizeAccountNumber(value) {
+      return String(value || '').replace(/\D/g, '');
+    }
+
+    function supplierLookupKey(bank, accountNumber) {
+      const normalizedBank = normalizeBankName(bank);
+      const normalizedNumber = normalizeAccountNumber(accountNumber);
+      return normalizedBank && normalizedNumber ? normalizedBank + '|' + normalizedNumber : '';
+    }
+
+    function getSupplierTitle(card) {
+      const originalTitle = card.originalTitle || card.title || card.category;
+      const key = supplierLookupKey(card.bank, card.accountNumber);
+      if (!supplierLookupReady || !key) return originalTitle;
+
+      const matches = supplierAccountLookup.get(key) || [];
+      if (matches.length !== 1) return originalTitle;
+
+      const match = matches[0];
+      if (!match.ownerName || !match.businessName) return originalTitle;
+      return match.ownerName + ' - ' + match.businessName + ' - ' +
+        match.bank + ' / ' + match.accountNumber;
+    }
+
+    function applySupplierTitles() {
+      cards = cards.map(function (card) {
+        const originalTitle = card.originalTitle || card.title || card.category;
+        return {
+          ...card,
+          originalTitle: originalTitle,
+          title: getSupplierTitle({ ...card, originalTitle: originalTitle })
+        };
+      });
+      renderCards();
+    }
+
+    function setSupplierStatus(message, state) {
+      supplierConnectionStatus.textContent = message;
+      supplierConnectionStatus.classList.remove('is-connected', 'is-warning');
+      if (state === 'connected') supplierConnectionStatus.classList.add('is-connected');
+      if (state === 'warning') supplierConnectionStatus.classList.add('is-warning');
+    }
+
+    async function loadSupplierAccountLookup() {
+      if (!supplierSupabaseClient) throw new Error('Library koneksi Supabase tidak tersedia.');
+
+      const { data: sessionResult, error: sessionError } = await supplierSupabaseClient.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!sessionResult.session) throw new Error('Sesi SIM-SPPG tidak ditemukan.');
+
+      const [accountsResult, suppliersResult] = await Promise.all([
+        supplierSupabaseClient
+          .from('accounts')
+          .select('bank,account_number,supplier_id')
+          .not('supplier_id', 'is', null),
+        supplierSupabaseClient
+          .from('income_suppliers')
+          .select('id,business_name,owner_name')
+      ]);
+
+      if (accountsResult.error) throw accountsResult.error;
+      if (suppliersResult.error) throw suppliersResult.error;
+
+      const suppliersById = new Map((suppliersResult.data || []).map(function (supplier) {
+        return [supplier.id, {
+          businessName: String(supplier.business_name || '').trim(),
+          ownerName: String(supplier.owner_name || '').trim()
+        }];
+      }));
+
+      const nextLookup = new Map();
+      (accountsResult.data || []).forEach(function (account) {
+        const key = supplierLookupKey(account.bank, account.account_number);
+        const supplier = suppliersById.get(account.supplier_id);
+        if (!key || !supplier || !supplier.ownerName || !supplier.businessName) return;
+
+        const entry = {
+          ownerName: supplier.ownerName,
+          businessName: supplier.businessName,
+          bank: normalizeBankName(account.bank),
+          accountNumber: String(account.account_number || '').trim()
+        };
+        const matches = nextLookup.get(key) || [];
+        const signature = [entry.ownerName, entry.businessName, entry.bank, entry.accountNumber]
+          .join('|').toLocaleLowerCase('id-ID');
+        const duplicate = matches.some(function (existing) {
+          return [existing.ownerName, existing.businessName, existing.bank, existing.accountNumber]
+            .join('|').toLocaleLowerCase('id-ID') === signature;
+        });
+        if (!duplicate) matches.push(entry);
+        nextLookup.set(key, matches);
+      });
+
+      supplierAccountLookup = nextLookup;
+      supplierLookupReady = true;
+      applySupplierTitles();
+      supplierLoginPanel.hidden = true;
+      disconnectSupplierBtn.hidden = false;
+      connectSupplierBtn.textContent = 'Muat Ulang Data';
+      setSupplierStatus('SIM-SPPG terhubung · data supplier siap', 'connected');
+      supplierLoginMessage.textContent = 'Data rekening supplier berhasil dimuat.';
+    }
+
     function getPrimaryBank(kitchen) {
       const name = String(kitchen || '').trim().toLocaleLowerCase('id-ID');
       if (name === 'cihaur' || name === 'sukaraja') return 'BRI';
@@ -811,7 +994,9 @@
           date: date,
           category: details.category,
           title: details.title || details.category,
+          originalTitle: details.title || details.category,
           bank: bank,
+          accountNumber: extractAccountNumber(rawDescription),
           isSecondaryBank: Boolean(primaryBank && bank && bank !== primaryBank),
           isReal: details.isReal,
           descriptions: descriptions,
@@ -1013,7 +1198,14 @@
       dateFormatBtn.disabled = false;
       dateFormatBtn.textContent = useSpacedDateFormat ? 'DD MMM YYYY' : 'DD-MMM-YYYY';
       dateFormatBtn.title = 'Ganti format tanggal';
-      cards = parsed.cards;
+      cards = parsed.cards.map(function (card) {
+        const originalTitle = card.originalTitle || card.title || card.category;
+        return {
+          ...card,
+          originalTitle: originalTitle,
+          title: getSupplierTitle({ ...card, originalTitle: originalTitle })
+        };
+      });
       ignoredLines = parsed.ignored;
       const validIds = new Set(cards.map(function (card) { return card.id; }));
       copiedFieldsByCard = Object.fromEntries(Object.entries(copiedFieldsByCard).filter(function (entry) {
@@ -1228,7 +1420,14 @@
         decodedKitchen = getFirstRowKitchen(decodedSource);
         dateFormatBtn.hidden = !usesFixedDateFormat(decodedKitchen) || parsed.cards.length === 0;
         dateFormatBtn.textContent = useSpacedDateFormat ? 'DD MMM YYYY' : 'DD-MMM-YYYY';
-        cards = parsed.cards;
+        cards = parsed.cards.map(function (card) {
+          const originalTitle = card.originalTitle || card.title || card.category;
+          return {
+            ...card,
+            originalTitle: originalTitle,
+            title: getSupplierTitle({ ...card, originalTitle: originalTitle })
+          };
+        });
         ignoredLines = parsed.ignored;
         const validIds = new Set(cards.map(function (card) { return card.id; }));
         copiedFieldsByCard = Object.fromEntries(Object.entries(copiedFieldsByCard).filter(function (entry) {
@@ -1239,6 +1438,123 @@
         setDecodeNotice('');
       } catch (error) {
         setDecodeNotice('Penyimpanan lokal tidak bisa dibaca. Paste ulang output untuk melanjutkan.');
+      }
+    }
+
+    connectSupplierBtn.addEventListener('click', async function () {
+      if (!supplierSupabaseClient) {
+        setSupplierStatus('Koneksi Supabase gagal dimuat', 'warning');
+        return;
+      }
+
+      try {
+        const { data, error } = await supplierSupabaseClient.auth.getSession();
+        if (error) throw error;
+        if (data.session) {
+          setSupplierStatus('Memuat ulang data supplier…');
+          connectSupplierBtn.disabled = true;
+          try {
+            await loadSupplierAccountLookup();
+          } catch (loadError) {
+            setSupplierStatus('Gagal memuat data supplier; coba login ulang', 'warning');
+            supplierLoginMessage.textContent = 'Gagal membaca master supplier. Periksa koneksi atau izin akun.';
+          } finally {
+            connectSupplierBtn.disabled = false;
+          }
+          return;
+        }
+      } catch (error) {
+        setSupplierStatus('Sesi SIM-SPPG tidak dapat dibaca', 'warning');
+      }
+
+      supplierLoginPanel.hidden = !supplierLoginPanel.hidden;
+      if (!supplierLoginPanel.hidden) supplierUsernameInput.focus();
+    });
+
+    cancelSupplierLoginBtn.addEventListener('click', function () {
+      supplierLoginPanel.hidden = true;
+      supplierLoginMessage.textContent = 'Login untuk mencocokkan nomor rekening dengan master supplier.';
+    });
+
+    supplierLoginForm.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      if (!supplierSupabaseClient) {
+        supplierLoginMessage.textContent = 'Library koneksi tidak tersedia. Muat ulang halaman dan coba lagi.';
+        return;
+      }
+
+      const username = supplierUsernameInput.value.trim().toLowerCase();
+      const pin = supplierPinInput.value.trim();
+      if (!username || username === 'guest') {
+        supplierLoginMessage.textContent = 'Gunakan akun SIM-SPPG bernama pengguna, bukan akun guest.';
+        return;
+      }
+      if (!/^\d{8}$/.test(pin)) {
+        supplierLoginMessage.textContent = 'PIN harus terdiri dari 8 angka.';
+        return;
+      }
+
+      submitSupplierLoginBtn.disabled = true;
+      connectSupplierBtn.disabled = true;
+      supplierLoginMessage.textContent = 'Menghubungkan ke SIM-SPPG…';
+      try {
+        const { data, error } = await supplierSupabaseClient.functions.invoke('login-with-username', {
+          body: { username: username, pin: pin }
+        });
+        if (error || !data || !data.access_token || !data.refresh_token) {
+          throw new Error('Username atau PIN salah.');
+        }
+
+        const { error: sessionError } = await supplierSupabaseClient.auth.setSession({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token
+        });
+        if (sessionError) throw sessionError;
+
+        supplierPinInput.value = '';
+        await loadSupplierAccountLookup();
+      } catch (error) {
+        supplierLoginMessage.textContent = 'Gagal menghubungkan. Periksa username, PIN, dan izin akses SIM-SPPG.';
+        setSupplierStatus('Belum terhubung ke SIM-SPPG', 'warning');
+      } finally {
+        submitSupplierLoginBtn.disabled = false;
+        connectSupplierBtn.disabled = false;
+      }
+    });
+
+    disconnectSupplierBtn.addEventListener('click', async function () {
+      if (supplierSupabaseClient) {
+        try { await supplierSupabaseClient.auth.signOut(); } catch (error) { /* Abaikan error saat sign out. */ }
+      }
+      supplierAccountLookup = new Map();
+      supplierLookupReady = false;
+      cards = cards.map(function (card) {
+        return { ...card, title: card.originalTitle || card.category };
+      });
+      renderCards();
+      disconnectSupplierBtn.hidden = true;
+      connectSupplierBtn.textContent = 'Hubungkan SIM-SPPG';
+      setSupplierStatus('Owner supplier: belum terhubung');
+      supplierLoginMessage.textContent = 'Login untuk mencocokkan nomor rekening dengan master supplier.';
+    });
+
+    async function restoreSupplierConnection() {
+      if (!supplierSupabaseClient) {
+        setSupplierStatus('Koneksi Supabase gagal dimuat', 'warning');
+        return;
+      }
+
+      try {
+        const { data, error } = await supplierSupabaseClient.auth.getSession();
+        if (error) throw error;
+        if (data.session) {
+          setSupplierStatus('Memuat data supplier…');
+          await loadSupplierAccountLookup();
+        }
+      } catch (error) {
+        supplierAccountLookup = new Map();
+        supplierLookupReady = false;
+        setSupplierStatus('Perlu login ulang ke SIM-SPPG', 'warning');
       }
     }
 
@@ -1253,6 +1569,7 @@
     ignoredLines = [];
     renderCards();
     updateProgress();
+    void restoreSupplierConnection();
   </script>
 </body>
 </html>
