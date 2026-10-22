@@ -1124,6 +1124,34 @@
       updateProgress();
     });
 
+    function prepareInputForSimSppg(inputText) {
+      return String(inputText == null ? '' : inputText)
+        .split(/\r\n|\n|\r/)
+        .map(function (line) {
+          const colonIndex = line.indexOf(':');
+          if (colonIndex < 0) return line;
+
+          // Only normalize the recipient portion before the bank/account marker.
+          // The first parenthetical there is the new Maker business-owner suffix:
+          // "CV Kramat (Ayi Suherlan)" -> "CV Kramat".
+          // Parentheses in category labels or transaction details stay untouched.
+          const afterCategory = line.slice(colonIndex + 1);
+          const bankMarker = /\s+-\s+[A-Za-z][A-Za-z0-9 ]*\s+\/\s+/.exec(afterCategory);
+          if (!bankMarker) return line;
+
+          const recipientAndDetails = afterCategory.slice(0, bankMarker.index);
+          const ownerSuffix = /\s+\([^()]*\)/.exec(recipientAndDetails);
+          if (!ownerSuffix) return line;
+
+          const sanitizedRecipient = recipientAndDetails.slice(0, ownerSuffix.index) +
+            recipientAndDetails.slice(ownerSuffix.index + ownerSuffix[0].length);
+          return line.slice(0, colonIndex + 1) +
+            sanitizedRecipient +
+            afterCategory.slice(bankMarker.index);
+        })
+        .join('\n');
+    }
+
     copyInputBtn.addEventListener('click', async function () {
       const inputText = sourceInput.value;
       if (!inputText.trim()) {
@@ -1131,8 +1159,9 @@
         return;
       }
       try {
-        await writeClipboard(inputText);
-        setDecodeNotice('Seluruh input data berhasil disalin. Sekarang bisa langsung paste ke SIM-SPPG.');
+        const simSppgInput = prepareInputForSimSppg(inputText);
+        await writeClipboard(simSppgInput);
+        setDecodeNotice('Input siap SIM-SPPG berhasil disalin. Nama pemilik dalam kurung dihapus hanya dari teks salinan.');
       } catch (error) {
         setDecodeNotice('Browser gagal menyalin input data. Coba gunakan HTTPS atau salin manual.');
       }
