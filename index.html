@@ -738,7 +738,8 @@
       }
 
       if (/^Lain-lain\s*:/i.test(source)) {
-        const label = titleCaseIndonesian(extractOtherDescription(source));
+        const detail = titleCaseIndonesian(extractOtherDescription(source));
+        const label = /^pembayaran\b/i.test(detail) ? detail : 'Pembayaran ' + detail;
         return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
@@ -775,7 +776,10 @@
         };
       }
 
-      const fallbackLabel = titleCaseIndonesian(prefix || 'Pembayaran');
+      const fallbackDetail = titleCaseIndonesian(prefix || 'Pembayaran');
+      const fallbackLabel = /^pembayaran\b/i.test(fallbackDetail)
+        ? fallbackDetail
+        : 'Pembayaran ' + fallbackDetail;
       return {
         category: fallbackLabel,
         title: targetAccount || fallbackLabel,
@@ -952,7 +956,7 @@
       cardsEl.querySelectorAll('input[data-role="description"], input[data-role="amount"]').forEach(function (element) {
         element.disabled = sourcePending;
       });
-      copyInputBtn.disabled = !sourceInput.value.trim();
+      copyInputBtn.disabled = !decodedSource || sourcePending || cards.length === 0;
     }
 
     function renderCards() {
@@ -1180,15 +1184,19 @@
     }
 
     copyInputBtn.addEventListener('click', async function () {
-      const inputText = sourceInput.value;
-      if (!inputText.trim()) {
+      if (sourcePending) {
+        setDecodeNotice('Decode perubahan terlebih dahulu sebelum menyalin input ke SIM-SPPG.');
+        return;
+      }
+      const inputText = decodedSource;
+      if (!inputText.trim() || cards.length === 0) {
         setDecodeNotice('Belum ada input data untuk disalin.');
         return;
       }
       try {
         const simSppgInput = prepareInputForSimSppg(inputText);
         await writeClipboard(simSppgInput);
-        setDecodeNotice('Input siap SIM-SPPG berhasil disalin. Nama pemilik dalam kurung dihapus hanya dari teks salinan.');
+        setDecodeNotice('Input Maker yang sudah di-decode berhasil disalin untuk SIM-SPPG. Nama pemilik dalam kurung dihapus hanya dari teks salinan.');
       } catch (error) {
         setDecodeNotice('Browser gagal menyalin input data. Coba gunakan HTTPS atau salin manual.');
       }
