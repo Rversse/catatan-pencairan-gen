@@ -228,7 +228,7 @@
       <div class="input-tools">
         <div class="button-row">
           <button class="btn btn-primary" id="decodeBtn" type="button">Decode</button>
-          <button class="btn btn-secondary" id="copyInputBtn" type="button" disabled>Copy Input untuk SIM-SPPG</button>
+          <button class="btn btn-secondary" id="copyInputBtn" type="button" disabled>Copy</button>
           <button class="btn btn-secondary" id="clearBtn" type="button">Clear</button>
         </div>
       </div>
@@ -707,7 +707,9 @@
         // parseOutput removes only the final amount before this function runs.
         const noteMatch = source.match(/^OPS HARIAN\s*:\s*.*?\s-\s[A-Z][A-Z0-9 ]*\s\/\s[^\s·]+\s·\s(.+)$/i);
         const note = noteMatch ? noteMatch[1].trim() : '';
-        const label = note || 'Pembayaran Ops Harian';
+        // OPS HARIAN detail is the note only; never drop the payment prefix.
+        const cleanNote = note.replace(/^Pembayaran\s+/i, '').trim();
+        const label = cleanNote ? 'Pembayaran ' + cleanNote : 'Pembayaran Ops Harian';
         return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
