@@ -713,7 +713,14 @@
       }
 
       if (/^Sewa Kendaraan\b/i.test(source)) {
-        const label = 'Pembayaran Sewa Kendaraan';
+        // Maker emits separate vehicle types, with the rental period in parentheses:
+        // "SEWA KENDARAAN MOBIL (12-Okt-2026 – 23-Okt-2026) : ..."
+        // Keep the type in the description so accountants can distinguish each payment.
+        const vehicleMatch = source.match(/^Sewa Kendaraan\s+(Mobil|Motor)\b/i);
+        const vehicleType = vehicleMatch
+          ? vehicleMatch[1].toLocaleLowerCase('id-ID') === 'mobil' ? 'Mobil' : 'Motor'
+          : '';
+        const label = 'Pembayaran Sewa Kendaraan' + (vehicleType ? ' ' + vehicleType : '');
         return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
