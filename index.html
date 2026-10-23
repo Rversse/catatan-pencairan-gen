@@ -695,8 +695,13 @@
         };
       }
 
-      if (/^Ops Harian\s*:/i.test(source)) {
-        const label = 'Pembayaran Ops Harian';
+      if (/^OPS HARIAN\s*:/i.test(source)) {
+        // Maker may append an optional note after the destination account:
+        // "OPS HARIAN : Name - BANK / account · Note · Amount".
+        // parseOutput removes only the final amount before this function runs.
+        const noteMatch = source.match(/^OPS HARIAN\s*:\s*.*?\s-\s[A-Z][A-Z0-9 ]*\s\/\s[^\s·]+\s·\s(.+)$/i);
+        const note = noteMatch ? noteMatch[1].trim() : '';
+        const label = note || 'Pembayaran Ops Harian';
         return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
       }
 
