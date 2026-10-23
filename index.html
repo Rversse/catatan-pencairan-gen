@@ -1143,7 +1143,7 @@
     sourceInput.addEventListener('input', function () {
       sourcePending = sourceInput.value.trim() !== decodedSource;
       decodeBtn.textContent = sourcePending ? 'Decode perubahan' : 'Decode';
-      copyInputBtn.disabled = !sourceInput.value.trim();
+      copyInputBtn.disabled = !decodedSource || sourcePending || cards.length === 0;
       dateFormatBtn.hidden = sourcePending || !usesFixedDateFormat(decodedKitchen) || cards.length === 0;
       updateProgress();
     });
