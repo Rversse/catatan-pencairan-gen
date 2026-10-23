@@ -1152,11 +1152,18 @@
           if (!bankMarker) return line;
 
           const recipientAndDetails = afterCategory.slice(0, bankMarker.index);
-          const ownerSuffix = /\s+\([^()]*\)/.exec(recipientAndDetails);
+          // GAS lines include " / Catatan gas" before the bank. Only inspect
+          // the recipient-name segment before that slash so "(4 tabung)" remains.
+          const detailSeparatorIndex = recipientAndDetails.indexOf(' / ');
+          const recipientName = detailSeparatorIndex >= 0
+            ? recipientAndDetails.slice(0, detailSeparatorIndex)
+            : recipientAndDetails;
+          const ownerSuffix = /\s+\([^()]*\)\s*$/.exec(recipientName);
           if (!ownerSuffix) return line;
 
-          const sanitizedRecipient = recipientAndDetails.slice(0, ownerSuffix.index) +
-            recipientAndDetails.slice(ownerSuffix.index + ownerSuffix[0].length);
+          const sanitizedRecipientName = recipientName.slice(0, ownerSuffix.index);
+          const sanitizedRecipient = sanitizedRecipientName +
+            (detailSeparatorIndex >= 0 ? recipientAndDetails.slice(detailSeparatorIndex) : '');
           return line.slice(0, colonIndex + 1) +
             sanitizedRecipient +
             afterCategory.slice(bankMarker.index);
