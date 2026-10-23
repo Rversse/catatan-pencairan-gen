@@ -614,7 +614,13 @@
       return match[1].slice(detailsSeparator + 3)
         .split(',')
         .map(function (item) {
-          return item.trim().replace(/\btabung\b/gi, 'tbg');
+          const detail = item.trim();
+          // Maker's fixed GAS row emits either "Gas 12kg (N tabung)"
+          // or "Gas 50kg (N tabung)". Normalize spacing/case so both
+          // sizes become a consistent description in the generated payment fields.
+          const cylinder = detail.match(/^Gas\s+(12|50)\s*kg\s*\((\d+)\s*tabung\)$/i);
+          if (cylinder) return 'Gas ' + cylinder[1] + 'kg (' + cylinder[2] + ' tbg)';
+          return detail.replace(/\btabung\b/gi, 'tbg');
         })
         .filter(Boolean);
     }
