@@ -556,7 +556,7 @@
           const businessName = supplierLabel[1].trim();
           const supplierOwner = supplierLabel[2].trim();
           const normalizedBank = normalizeBankName(bank);
-          const normalizedBusinessName = businessName.replace(/\\s+/g, ' ').trim().toLocaleLowerCase('id-ID');
+          const normalizedBusinessName = businessName.replace(/\s+/g, ' ').trim().toLocaleLowerCase('id-ID');
           // These suppliers must remain identified by their business names, not the owner.
           if (normalizedBusinessName === 'cv kramat' || normalizedBusinessName === 'koperasi arutala') {
             return businessName + ' - ' + normalizedBank + ' / ' + accountNumber;
