@@ -199,6 +199,81 @@
     .copy-input-help { color:var(--muted); font-size:11px; margin-top:6px; }
     .stats { margin:18px 0 11px; }
     .cards { gap:10px; }
+
+    /* Visual refresh: lively but still focused on fast data entry. */
+    .topbar {
+      position:relative; overflow:hidden;
+      background:radial-gradient(ellipse at 82% -30%, rgba(96,111,255,.42), transparent 48%),
+                 linear-gradient(115deg,#0b1220 0%,#121d3b 58%,#17265a 100%);
+      border-bottom:1px solid rgba(164,178,255,.22);
+    }
+    .topbar:after {
+      content:""; position:absolute; width:230px; height:230px; right:-65px; top:-155px;
+      border:1px solid rgba(255,255,255,.14); border-radius:50%;
+      box-shadow:0 0 0 24px rgba(255,255,255,.025),0 0 0 50px rgba(255,255,255,.02);
+      pointer-events:none; animation:orbit-glow 10s ease-in-out infinite alternate;
+    }
+    .topbar-inner { position:relative; z-index:1; }
+    .brand { gap:13px; }
+    .brand-mark {
+      background:linear-gradient(145deg,#6d7cff,#3948c4);
+      box-shadow:0 7px 22px rgba(73,91,221,.34);
+      animation:mark-float 4s ease-in-out infinite;
+    }
+    .brand-subtitle { color:#c1c9e3 !important; font-size:11px !important; margin-top:3px !important; }
+    main { animation:page-enter .48s cubic-bezier(.2,.75,.25,1) both; }
+    .panel {
+      position:relative; overflow:hidden;
+      box-shadow:0 10px 32px rgba(28,42,83,.055),0 2px 5px rgba(28,42,83,.025);
+      transition:box-shadow .22s ease, transform .22s ease;
+    }
+    .panel:before {
+      content:""; position:absolute; left:0; top:0; width:100%; height:3px;
+      background:linear-gradient(90deg,#6877ff,#49c89a,#f6c45a,#6877ff);
+      background-size:220% 100%; animation:gradient-drift 8s linear infinite;
+    }
+    .panel:focus-within { box-shadow:0 14px 38px rgba(52,73,197,.1),0 0 0 1px rgba(104,119,255,.12); }
+    .btn { transition:transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease; }
+    .btn:hover:not(:disabled) { transform:translateY(-1px); }
+    .btn-primary { box-shadow:0 4px 11px rgba(52,73,197,.2); }
+    .btn-primary:hover:not(:disabled) { box-shadow:0 7px 16px rgba(52,73,197,.28); }
+    .counter { border:1px solid #dce3f2; background:linear-gradient(135deg,#eef1ff,#f5f7ff); }
+    .progress-shell { height:7px; background:#e6eaf4; box-shadow:inset 0 1px 2px rgba(16,24,40,.05); }
+    .progress-bar {
+      position:relative; border-radius:999px;
+      background:linear-gradient(90deg,#1b9b64,#45d49a,#168552); background-size:200% 100%;
+      box-shadow:0 0 12px rgba(33,163,102,.2);
+      transition:width .42s cubic-bezier(.22,.75,.2,1); animation:progress-shimmer 3s linear infinite;
+    }
+    .payment-card {
+      position:relative; overflow:hidden;
+      box-shadow:0 4px 14px rgba(22,34,66,.035);
+      transition:transform .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+      animation:card-enter .42s cubic-bezier(.2,.75,.25,1) both;
+      animation-delay:calc(min(var(--card-index, 0), 10) * 35ms);
+    }
+    .payment-card:hover { transform:translateY(-2px); box-shadow:0 9px 22px rgba(22,34,66,.09); }
+    .payment-card.is-done { box-shadow:0 5px 18px rgba(20,83,45,.13); }
+    .payment-card.is-done:after {
+      content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+      background:linear-gradient(115deg,transparent 20%,rgba(255,255,255,.055) 48%,transparent 72%);
+      background-size:220% 100%; animation:done-glint 1.1s ease-out both;
+    }
+    .status-dot { transition:background .2s ease, box-shadow .2s ease, transform .2s ease; }
+    .payment-card.is-done .status-dot { transform:scale(1.08); background:#86efac; box-shadow:0 0 0 4px rgba(134,239,172,.16); }
+    .empty-icon { animation:icon-bob 3s ease-in-out infinite; }
+    @keyframes page-enter { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes card-enter { from { opacity:0; transform:translateY(9px) scale(.995); } to { opacity:1; transform:translateY(0) scale(1); } }
+    @keyframes mark-float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-2px); } }
+    @keyframes orbit-glow { from { transform:translate(0,0) rotate(0deg); } to { transform:translate(-14px,10px) rotate(18deg); } }
+    @keyframes gradient-drift { to { background-position:220% 0; } }
+    @keyframes progress-shimmer { to { background-position:200% 0; } }
+    @keyframes done-glint { from { background-position:130% 0; } to { background-position:-130% 0; } }
+    @keyframes icon-bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-4px); } }
+    @media (prefers-reduced-motion:reduce) {
+      *, *:before, *:after { animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:.01ms !important; }
+    }
+
     @media (max-width:900px) { .fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     @media (max-width:620px) {
       .topbar { padding:13px 0; }
@@ -221,7 +296,7 @@
     <div class="topbar-inner">
       <div class="brand">
         <span class="brand-mark"><img src="./fav.svg" alt=""></span>
-        <span>Catatan Pencairan Maker</span>
+        <span>Catatan Pencairan Maker<small class="brand-subtitle">Workspace pencairan · rapi, cepat, terkendali</small></span>
       </div>
     </div>
   </header>
@@ -1025,7 +1100,7 @@
             '</div>' +
           '</div>';
 
-        return '<article class="payment-card' + (done ? ' is-done' : '') + (card.isSecondaryBank ? ' is-secondary-bank' : '') + '" data-card-id="' + escapeHtml(card.id) + '">' +
+        return '<article class="payment-card' + (done ? ' is-done' : '') + (card.isSecondaryBank ? ' is-secondary-bank' : '') + '" style="--card-index:' + index + '" data-card-id="' + escapeHtml(card.id) + '">' +
           '<div class="card-top">' +
             '<div class="number">' + String(index + 1).padStart(2, '0') + '</div>' +
             '<div class="card-head">' +
