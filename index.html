@@ -103,7 +103,12 @@
       background:#fff; border:1px solid var(--line); border-radius:16px; padding:17px;
       box-shadow:0 4px 14px rgba(22,34,66,.035); transition:border-color .15s, background .15s, opacity .15s;
     }
-    .payment-card.is-done { border-color:#b8e5c9; background:#fbfffc; }
+    .payment-card.is-done { border-color:#166534; background:#14532d; color:#f0fdf4; }
+    .payment-card.is-done .number { background:#166534; color:#f0fdf4; }
+    .payment-card.is-done .card-context { color:#d1fae5; }
+    .payment-card.is-done .field-label { color:#d1fae5; }
+    .payment-card.is-done .completed-note { color:#bbf7d0; }
+    .payment-card.is-done .completion-row { border-top-color:#2f6b45; }
     .payment-card.is-secondary-bank:not(.is-done) { border:2px solid #3b82f6; box-shadow:0 0 0 1px rgba(59,130,246,.14); }
     .payment-card.is-secondary-bank:not(.is-done):hover { border-color:#2563eb; }
     .card-top { display:flex; align-items:flex-start; gap:12px; }
@@ -512,7 +517,7 @@
       return value || 'Lain-lain';
     }
 
-    function parseTargetAccount(rawDescription) {
+    function parseTargetAccount(rawDescription, kitchen) {
       const source = String(rawDescription || '').trim();
       if (/^_OPS Real_$/i.test(source)) return 'Realisasi Ops Harian';
 
@@ -550,7 +555,18 @@
         if (supplierLabel && supplierLabel[1].trim() && supplierLabel[2].trim()) {
           const businessName = supplierLabel[1].trim();
           const supplierOwner = supplierLabel[2].trim();
-          return supplierOwner + ' - ' + businessName + ' - ' + normalizeBankName(bank) + ' / ' + accountNumber;
+          const normalizedBank = normalizeBankName(bank);
+          const kitchenName = String(kitchen || '').trim().toLocaleLowerCase('id-ID');
+          const bniOwnerOnlyKitchens = [
+            'cipetir', 'cisepat', 'kertajadi', 'cikondang',
+            'cimanggu', 'warungbitung', 'cibaregbeg', 'campakamulya'
+          ];
+          // For the specified kitchens, BNI output uses the owner's name only.
+          // Other banks retain the supplier/business name in the output.
+          if (normalizedBank === 'BNI' && bniOwnerOnlyKitchens.includes(kitchenName)) {
+            return supplierOwner + ' - ' + normalizedBank + ' / ' + accountNumber;
+          }
+          return supplierOwner + ' - ' + businessName + ' - ' + normalizedBank + ' / ' + accountNumber;
         }
       }
 
@@ -666,7 +682,7 @@
 
     function describeTransaction(rawDescription, kitchen, date) {
       const source = String(rawDescription || '').trim();
-      const targetAccount = parseTargetAccount(source);
+      const targetAccount = parseTargetAccount(source, kitchen);
 
       if (/^_OPS Real_$/i.test(source)) {
         const label = 'Realisasi Ops Harian';
