@@ -1272,9 +1272,25 @@
     });
 
     decodeBtn.addEventListener('click', function () {
-      sourcePending = false;
-      processSource(sourceInput.value, false);
-      updateProgress();
+      try {
+        const inputText = sourceInput.value;
+        if (!inputText.trim()) {
+          setDecodeNotice('Tempel output Maker terlebih dahulu, lalu klik Decode.');
+          sourceInput.focus();
+          return;
+        }
+        processSource(inputText, false);
+        sourcePending = false;
+        decodeBtn.textContent = 'Decode';
+        pendingNotice.hidden = true;
+        updateProgress();
+        if (cards.length === 0) {
+          setDecodeNotice('Decode selesai, tetapi tidak ada transaksi yang dikenali. Periksa format output Maker dan daftar baris yang dilewati.');
+        }
+      } catch (error) {
+        console.error('Decode gagal:', error);
+        setDecodeNotice('Decode gagal diproses. Muat ulang halaman dan coba lagi. Jika masih gagal, buka Console untuk melihat detail error.');
+      }
     });
 
     clearBtn.addEventListener('click', function () {
