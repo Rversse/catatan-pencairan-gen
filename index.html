@@ -553,9 +553,11 @@
       const values = (items || []).map(function (item) {
         return String(item || '').trim();
       }).filter(Boolean);
-      const label = values.length ? joinNatural(values) : '';
+      const segments = values.map(function (item, index) {
+        return index === 0 ? 'Pembayaran ' + item : item;
+      });
       const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
-      return distributeDescriptionFields(dateText ? [label, dateText] : [label]);
+      return distributeDescriptionFields(dateText ? segments.concat(dateText) : segments);
     }
 
     function extractOtherDescription(rawDescription) {
