@@ -389,7 +389,7 @@
       return value ? value.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
     }
 
-    const MAX_DESCRIPTION_LENGTH = 40;
+    const MAX_DESCRIPTION_LENGTH = 40;\n    let descriptionOverflowWarnings = [];
     const PAYROLL_KINDS = [
       'Gaji Relawan',
       'Insentif PIC Sekolah',
@@ -468,44 +468,66 @@
     }
 
     function splitTextAtLimit(text, limit) {
-      // Nama bahan majemuk dianggap satu token agar tidak terbelah antar-deskripsi.
-      // "Daging" dipasangkan dengan kata berikutnya untuk mencakup variasi jenis daging.
       const words = String(text || '').trim().split(/\s+/).filter(Boolean);
-      const atomicWords = [];
-      for (let index = 0; index < words.length; index += 1) {
-        const word = words[index];
-        const normalized = word.replace(/^[,]+|[,]+$/g, '').toLocaleLowerCase('id-ID');
-        const next = words[index + 1];
-        const nextNormalized = next ? next.replace(/^[,]+|[,]+$/g, '').toLocaleLowerCase('id-ID') : '';
-        if (['telur', 'daging'].includes(normalized) && next) {
-          atomicWords.push(word + ' ' + next);
-          index += 1;
-        } else {
-          atomicWords.push(word);
-        }
-      }
       const chunks = [];
       let current = '';
-      atomicWords.forEach(function (word) {
-        if (word.length > limit) {
-          if (current) { chunks.push(current); current = ''; }
-          // A single unbroken token cannot be split without corrupting the word.
-          chunks.push(word);
+
+      words.forEach(function (word) {
+        const candidate = current ? current + ' ' + word : word;
+        if (candidate.length <= limit) {
+          current = candidate;
           return;
         }
-        const candidate = current ? current + ' ' + word : word;
-        if (candidate.length > limit) {
-          // Keep "dan" with the final item instead of leaving it at the end of the previous field.
-          const carryConjunction = /\sdan$/i.test(current);
-          if (carryConjunction) current = current.replace(/\sdan$/i, '');
-          if (current) chunks.push(current);
-          current = carryConjunction ? 'dan ' + word : word;
-        } else {
-          current = candidate;
-        }
+        if (current) chunks.push(current);
+        // A word is never cut in half. An unusually long single word is
+        // retained intact and reported by distributeDescriptionFields().
+        current = word;
       });
+
       if (current) chunks.push(current);
       return chunks;
+    }
+
+    function distributeDescriptionFields(segments) {
+      const fields = ['', '', ''];
+      let fieldIndex = 0;
+      let overflow = false;
+
+      (segments || []).forEach(function (rawSegment, segmentIndex) {
+        const segment = String(rawSegment || '').trim();
+        if (!segment) return;
+
+        const chunks = splitTextAtLimit(segment, MAX_DESCRIPTION_LENGTH);
+        chunks.forEach(function (chunk, chunkIndex) {
+          if (fieldIndex >= fields.length) {
+            overflow = true;
+            return;
+          }
+
+          const separator = fields[fieldIndex]
+            ? (chunkIndex === 0 ? ', ' : ' ')
+            : '';
+          const candidate = fields[fieldIndex] + separator + chunk;
+
+          if (candidate.length <= MAX_DESCRIPTION_LENGTH) {
+            fields[fieldIndex] = candidate;
+          } else {
+            fieldIndex += 1;
+            if (fieldIndex >= fields.length) {
+              overflow = true;
+              return;
+            }
+            fields[fieldIndex] = chunk;
+          }
+
+          if (chunk.length > MAX_DESCRIPTION_LENGTH) overflow = true;
+        });
+      });
+
+      if (overflow) {
+        descriptionOverflowWarnings.push('Ada deskripsi yang melebihi kapasitas 3 field (maksimal 120 karakter) atau mengandung satu kata lebih dari 40 karakter. Periksa sumber transaksi.');
+      }
+      return fields;
     }
 
     function hasUsableDate(date) {
@@ -515,73 +537,25 @@
     function buildDescriptionFields(label, date) {
       const cleanLabel = String(label || '').trim();
       const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
-      if (!dateText) return [cleanLabel, '', ''];
-
-      const combined = cleanLabel + ', ' + dateText;
-      if (combined.length <= MAX_DESCRIPTION_LENGTH) return [combined, '', ''];
-      if (cleanLabel.length <= MAX_DESCRIPTION_LENGTH) return [cleanLabel, dateText, ''];
-
-      // For unusually long item lists, keep each field within 40 characters
-      // and reserve the final field for the date.
-      const chunks = splitTextAtLimit(cleanLabel, MAX_DESCRIPTION_LENGTH);
-      return [chunks[0] || '', chunks[1] || '', dateText];
+      return distributeDescriptionFields(dateText ? [cleanLabel, dateText] : [cleanLabel]);
     }
 
     function buildProductDescriptionFields(products, date) {
-      const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
       const items = (products || []).map(function (product) {
         return String(product || '').trim();
       }).filter(Boolean);
       const label = items.length ? 'Pembayaran ' + joinNatural(items) : 'Pembayaran Bahan Baku';
-      const chunks = splitTextAtLimit(label, MAX_DESCRIPTION_LENGTH);
-
-      // Keep the date as one value; a spaced date must never split between fields.
-      if (dateText) {
-        const lastIndex = chunks.length - 1;
-        if (lastIndex >= 0) {
-          const combinedLast = chunks[lastIndex] + ', ' + dateText;
-          if (combinedLast.length <= MAX_DESCRIPTION_LENGTH) {
-            chunks[lastIndex] = combinedLast;
-          } else {
-            chunks.push(dateText);
-          }
-        } else {
-          chunks.push(dateText);
-        }
-      }
-
-      // The interface has three description fields, each capped at 40 characters.
-      return [chunks[0] || '', chunks[1] || '', chunks[2] || ''];
+      const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
+      return distributeDescriptionFields(dateText ? [label, dateText] : [label]);
     }
 
     function buildCombinedDescriptionFields(items, date) {
       const values = (items || []).map(function (item) {
         return String(item || '').trim();
       }).filter(Boolean);
-      const fields = ['', '', ''];
-      const fieldCount = Math.min(values.length, fields.length);
-
-      values.slice(0, fields.length).forEach(function (item, index) {
-        fields[index] = index === 0 ? 'Pembayaran ' + item : item;
-      });
-
+      const label = values.length ? joinNatural(values) : '';
       const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
-      if (dateText && fieldCount > 0) {
-        const lastIndex = fieldCount - 1;
-        const combined = fields[lastIndex] + ', ' + dateText;
-        if (combined.length <= MAX_DESCRIPTION_LENGTH) {
-          fields[lastIndex] = combined;
-        } else if (lastIndex + 1 < fields.length) {
-          const chunks = splitTextAtLimit(fields[lastIndex], MAX_DESCRIPTION_LENGTH);
-          fields[lastIndex] = chunks[0] || '';
-          fields[lastIndex + 1] = [chunks.slice(1).join(' '), dateText].filter(Boolean).join(', ');
-        } else {
-          const room = Math.max(1, MAX_DESCRIPTION_LENGTH - dateText.length - 2);
-          fields[lastIndex] = fields[lastIndex].slice(0, room).trim() + ', ' + dateText;
-        }
-      }
-
-      return fields;
+      return distributeDescriptionFields(dateText ? [label, dateText] : [label]);
     }
 
     function extractOtherDescription(rawDescription) {
@@ -723,42 +697,17 @@
     }
 
     function buildGasDescriptionFields(products, date) {
-      const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
       const items = (products || []).map(function (item) { return String(item || '').trim(); }).filter(Boolean);
       let label = 'Pembayaran Gas';
 
       // Avoid repeating the word "Gas" when the Maker detail already starts with it.
-      if (items.length && /^Gas(?:\s|$)/i.test(items[0])) {
-        const gasDetail = items.shift().replace(/^Gas\b/i, '').trim();
+      if (items.length && /^Gas(?:\\s|$)/i.test(items[0])) {
+        const gasDetail = items.shift().replace(/^Gas\\b/i, '').trim();
         if (gasDetail) label += ' ' + gasDetail;
       }
 
-      const segments = [label].concat(items);
-      if (dateText) segments.push(dateText);
-
-      const fields = ['', '', ''];
-      let fieldIndex = 0;
-
-      segments.forEach(function (segment) {
-        splitTextAtLimit(segment, MAX_DESCRIPTION_LENGTH).forEach(function (chunk) {
-          if (fieldIndex >= fields.length || !chunk) return;
-
-          if (!fields[fieldIndex]) {
-            fields[fieldIndex] = chunk;
-            return;
-          }
-
-          const candidate = fields[fieldIndex] + ', ' + chunk;
-          if (candidate.length <= MAX_DESCRIPTION_LENGTH) {
-            fields[fieldIndex] = candidate;
-          } else {
-            fieldIndex += 1;
-            if (fieldIndex < fields.length) fields[fieldIndex] = chunk;
-          }
-        });
-      });
-
-      return fields;
+      const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
+      return distributeDescriptionFields([label].concat(items, dateText ? [dateText] : []));
     }
 
     function describeTransaction(rawDescription, kitchen, date) {
@@ -979,7 +928,7 @@
         return left.sourceLineNo - right.sourceLineNo;
       });
 
-      return { cards: parsedCards, ignored: skipped, kitchen: kitchen };
+      return { cards: parsedCards, ignored: skipped, kitchen: kitchen, descriptionWarnings: Array.from(new Set(descriptionOverflowWarnings)) };
     }
 
     function persistWorkspace() {
@@ -1167,7 +1116,7 @@
       }));
       completedIds = new Set(cards.filter(isCardComplete).map(function (card) { return card.id; }));
       renderCards();
-      setDecodeNotice(cards.length ? '' : 'Tidak ada baris transaksi yang dikenali. Periksa format output.');
+      setDecodeNotice(parsed.descriptionWarnings.length\n        ? parsed.descriptionWarnings.join(' ')\n        : cards.length ? '' : 'Tidak ada baris transaksi yang dikenali. Periksa format output.');
       persistWorkspace();
     }
 
