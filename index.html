@@ -750,15 +750,22 @@
       }
 
       if (/^OPS HARIAN\s*:/i.test(source)) {
-        // Maker may append an optional note after the destination account:
-        // "OPS HARIAN : Name - BANK / account · Note · Amount".
-        // parseOutput removes only the final amount before this function runs.
-        const noteMatch = source.match(/^OPS HARIAN\s*:\s*.*?\s-\s[A-Z][A-Z0-9 ]*\s\/\s[^\s·]+\s·\s(.+)$/i);
-        const note = noteMatch ? noteMatch[1].trim() : '';
-        // OPS HARIAN detail is the note only; never drop the payment prefix.
+        // Maker emits the same OPS HARIAN prefix for both default and custom
+        // operational entries. Custom entries append their editable Catatan:
+        // "OPS HARIAN : Name - BANK / account · Note".
+        // parseOutput removes the final amount before this function runs.
+        const accountAndNote = source.match(/^OPS HARIAN\s*:\s*.*?\s-\s[A-Z][A-Z0-9 ]*\s\/\s[^\s·]+(?:\s·\s([\s\S]*))?$/i);
+        const note = accountAndNote ? String(accountAndNote[1] || '').trim() : '';
+        // Keep OPS HARIAN as the transaction category; only the description
+        // follows the Maker Catatan. Empty notes retain the existing default.
         const cleanNote = note.replace(/^Pembayaran\s+/i, '').trim();
-        const label = cleanNote ? 'Pembayaran ' + cleanNote : 'Pembayaran Ops Harian';
-        return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+        const descriptionLabel = cleanNote ? 'Pembayaran ' + cleanNote : 'Pembayaran Ops Harian';
+        return {
+          category: 'OPS HARIAN',
+          title: targetAccount || 'OPS HARIAN',
+          isReal: false,
+          descriptions: buildDescriptionFields(descriptionLabel, date)
+        };
       }
 
       // Normalize legacy and current SPPG incentive labels to the payment wording.
