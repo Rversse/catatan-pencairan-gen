@@ -254,6 +254,8 @@
     }
     .payment-card:hover { transform:translateY(-2px); box-shadow:0 9px 22px rgba(22,34,66,.09); }
     .payment-card.is-done { box-shadow:0 5px 18px rgba(20,83,45,.13); }
+    .payment-card.is-latest-copy { border:3px solid #2563eb !important; box-shadow:0 0 0 2px rgba(37,99,235,.16),0 7px 20px rgba(37,99,235,.12); }
+    .payment-card.is-latest-copy:hover { border-color:#1d4ed8 !important; }
     .payment-card.is-done:after {
       content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
       background:linear-gradient(115deg,transparent 20%,rgba(255,255,255,.055) 48%,transparent 72%);
@@ -366,6 +368,7 @@
     let cards = [];
     let completedIds = new Set();
     let copiedFieldsByCard = {};
+    let latestCopiedCardId = '';
     let copiedTooltipTimers = new WeakMap();
     let edits = {};
     let ignoredLines = [];
@@ -803,8 +806,14 @@
             periodLabel = startDay + ' ' + startMonth + ' ' + startYear + ' - ' + endDay + ' ' + endMonth + ' ' + endYear;
           }
         }
-        const label = 'Pencairan Sewa ' + vehicleType + (periodLabel ? ' (' + periodLabel + ')' : '');
-        return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
+        const label = 'Pencairan Sewa ' + vehicleType;
+        const periodDescription = periodLabel ? 'Periode ' + periodLabel : '';
+        return {
+          category: label,
+          title: targetAccount || label,
+          isReal: false,
+          descriptions: [label, periodDescription, '']
+        };
       }
 
       if (/^Lain-lain\s*:/i.test(source)) {
@@ -1059,7 +1068,7 @@
             '</div>' +
           '</div>';
 
-        return '<article class="payment-card' + (done ? ' is-done' : '') + (card.isSecondaryBank ? ' is-secondary-bank' : '') + '" style="--card-index:' + index + '" data-card-id="' + escapeHtml(card.id) + '">' +
+        return '<article class="payment-card' + (done ? ' is-done' : '') + (card.isSecondaryBank ? ' is-secondary-bank' : '') + (card.id === latestCopiedCardId ? ' is-latest-copy' : '') + '" style="--card-index:' + index + '" data-card-id="' + escapeHtml(card.id) + '">' +
           '<div class="card-top">' +
             '<div class="number">' + String(index + 1).padStart(2, '0') + '</div>' +
             '<div class="card-head">' +
@@ -1082,6 +1091,7 @@
         cards = [];
         completedIds.clear();
         copiedFieldsByCard = {};
+        latestCopiedCardId = '';
         edits = {};
         ignoredLines = [];
         demoMode = false;
@@ -1101,6 +1111,7 @@
       if (!isSameBatch) {
         completedIds.clear();
         copiedFieldsByCard = {};
+        latestCopiedCardId = '';
         edits = {};
       }
 
@@ -1174,6 +1185,11 @@
         await writeClipboard(value);
         if (!copiedFieldsByCard[card.id]) copiedFieldsByCard[card.id] = {};
         copiedFieldsByCard[card.id][fieldKey] = value;
+        latestCopiedCardId = card.id;
+        cardsEl.querySelectorAll('.payment-card.is-latest-copy').forEach(function (item) {
+          item.classList.remove('is-latest-copy');
+        });
+        if (cardEl) cardEl.classList.add('is-latest-copy');
         field.classList.add('copied-field');
         window.setTimeout(function () {
           field.classList.remove('copied-field');
