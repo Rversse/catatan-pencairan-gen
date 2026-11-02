@@ -389,7 +389,8 @@
       return value ? value.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
     }
 
-    const MAX_DESCRIPTION_LENGTH = 40;\n    let descriptionOverflowWarnings = [];
+    const MAX_DESCRIPTION_LENGTH = 40;
+    let descriptionOverflowWarnings = [];
     const PAYROLL_KINDS = [
       'Gaji Relawan',
       'Insentif PIC Sekolah',
@@ -1125,7 +1126,9 @@
       }));
       completedIds = new Set(cards.filter(isCardComplete).map(function (card) { return card.id; }));
       renderCards();
-      setDecodeNotice(parsed.descriptionWarnings.length\n        ? parsed.descriptionWarnings.join(' ')\n        : cards.length ? '' : 'Tidak ada baris transaksi yang dikenali. Periksa format output.');
+      setDecodeNotice(parsed.descriptionWarnings.length
+        ? parsed.descriptionWarnings.join(' ')
+        : cards.length ? '' : 'Tidak ada baris transaksi yang dikenali. Periksa format output.');
       persistWorkspace();
     }
 
