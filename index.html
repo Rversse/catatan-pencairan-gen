@@ -703,8 +703,8 @@
       let label = 'Pembayaran Gas';
 
       // Avoid repeating the word "Gas" when the Maker detail already starts with it.
-      if (items.length && /^Gas(?:\\s|$)/i.test(items[0])) {
-        const gasDetail = items.shift().replace(/^Gas\\b/i, '').trim();
+      if (items.length && /^Gas(?:\s|$)/i.test(items[0])) {
+        const gasDetail = items.shift().replace(/^Gas\b/i, '').trim();
         if (gasDetail) label += ' ' + gasDetail;
       }
 
