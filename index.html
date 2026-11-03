@@ -784,25 +784,25 @@
         };
       }
 
-      if (/^Sewa Kendaraan\\b/i.test(source)) {
+      if (/^Sewa Kendaraan\b/i.test(source)) {
         // Maker format: "Sewa Kendaraan 2 UNIT MOBIL (09-11 s.d. 13-11-2026)".
         // Also accept the legacy "Sewa Kendaraan Mobil (09-Nov-2026 - 13-Nov-2026)".
-        const vehicleMatch = source.match(/^Sewa Kendaraan\\s+(?:(\\d+)\\s+UNIT\\s+)?(Mobil|Motor)\\b/i);
+        const vehicleMatch = source.match(/^Sewa Kendaraan\s+(?:(\d+)\s+UNIT\s+)?(Mobil|Motor)\b/i);
         const unitCount = vehicleMatch && vehicleMatch[1] ? String(Number(vehicleMatch[1])) : '1';
         const vehicleType = vehicleMatch
           ? vehicleMatch[2].toLocaleLowerCase('id-ID') === 'mobil' ? 'Mobil' : 'Motor'
           : '';
 
-        const periodTextMatch = source.match(/\\(([^()]*)\\)/);
+        const periodTextMatch = source.match(/\(([^()]*)\)/);
         const rawPeriod = periodTextMatch ? periodTextMatch[1].trim() : '';
         let periodLabel = '';
 
-        const compactSameMonth = rawPeriod.match(/^(\\d{2})-(\\d{2})\\s+([A-Za-z]{3})\\s+(\\d{4})$/i);
-        const compactSameYear = rawPeriod.match(/^(\\d{2})-([A-Za-z]{3})\\s+s\\.d\\.\\s+(\\d{2})-([A-Za-z]{3})-(\\d{4})$/i);
-        const compactCrossYear = rawPeriod.match(/^(\\d{2})-([A-Za-z]{3})-(\\d{4})\\s+s\\.d\\.\\s+(\\d{2})-([A-Za-z]{3})-(\\d{4})$/i);
-        const numericSameYear = rawPeriod.match(/^(\\d{2})-(\\d{2})\\s+s\\.d\\.\\s+(\\d{2})-(\\d{2})-(\\d{4})$/i);
-        const numericCrossYear = rawPeriod.match(/^(\\d{2})-(\\d{2})-(\\d{4})\\s+s\\.d\\.\\s+(\\d{2})-(\\d{2})-(\\d{4})$/i);
-        const legacyPeriod = rawPeriod.match(/^(\\d{1,2})-([A-Za-z]{3})-(\\d{4})\\s*[–-]\\s*(\\d{1,2})-([A-Za-z]{3})-(\\d{4})$/i);
+        const compactSameMonth = rawPeriod.match(/^(\d{2})-(\d{2})\s+([A-Za-z]{3})\s+(\d{4})$/i);
+        const compactSameYear = rawPeriod.match(/^(\d{2})-([A-Za-z]{3})\s+s\.d\.\s+(\d{2})-([A-Za-z]{3})-(\d{4})$/i);
+        const compactCrossYear = rawPeriod.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})\s+s\.d\.\s+(\d{2})-([A-Za-z]{3})-(\d{4})$/i);
+        const numericSameYear = rawPeriod.match(/^(\d{2})-(\d{2})\s+s\.d\.\s+(\d{2})-(\d{2})-(\d{4})$/i);
+        const numericCrossYear = rawPeriod.match(/^(\d{2})-(\d{2})-(\d{4})\s+s\.d\.\s+(\d{2})-(\d{2})-(\d{4})$/i);
+        const legacyPeriod = rawPeriod.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})\s*[–-]\s*(\d{1,2})-([A-Za-z]{3})-(\d{4})$/i);
         const monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
         const monthName = (month) => monthNames.find((name) => name.toLocaleLowerCase('id-ID') === month.toLocaleLowerCase('id-ID')) || '';
         if (compactSameMonth) {
