@@ -784,38 +784,50 @@
         };
       }
 
-      if (/^Sewa Kendaraan\b/i.test(source)) {
-        // Preserve the full vehicle rental period from Maker's source line.
-        const vehicleMatch = source.match(/^Sewa Kendaraan\s+(Mobil|Motor)\b/i);
+      if (/^Sewa Kendaraan\\b/i.test(source)) {
+        // Maker format: "Sewa Kendaraan 2 UNIT MOBIL (09-11 s.d. 13-11-2026)".
+        // Also accept the legacy "Sewa Kendaraan Mobil (09-Nov-2026 - 13-Nov-2026)".
+        const vehicleMatch = source.match(/^Sewa Kendaraan\\s+(?:(\\d+)\\s+UNIT\\s+)?(Mobil|Motor)\\b/i);
+        const unitCount = vehicleMatch && vehicleMatch[1] ? String(Number(vehicleMatch[1])) : '1';
         const vehicleType = vehicleMatch
-          ? vehicleMatch[1].toLocaleLowerCase('id-ID') === 'mobil' ? 'Mobil' : 'Motor'
+          ? vehicleMatch[2].toLocaleLowerCase('id-ID') === 'mobil' ? 'Mobil' : 'Motor'
           : '';
-        const periodMatch = source.match(/\((\d{1,2})-([A-Za-z]{3})-(\d{4})\s*[–-]\s*(\d{1,2})-([A-Za-z]{3})-(\d{4})\)/i);
+
+        const periodTextMatch = source.match(/\\(([^()]*)\\)/);
+        const rawPeriod = periodTextMatch ? periodTextMatch[1].trim() : '';
         let periodLabel = '';
-        if (periodMatch) {
-          const [, startDayRaw, startMonthRaw, startYear, endDayRaw, endMonthRaw, endYear] = periodMatch;
-          const startDay = String(Number(startDayRaw));
-          const endDay = String(Number(endDayRaw));
-          const startMonth = startMonthRaw.charAt(0).toLocaleUpperCase('id-ID') + startMonthRaw.slice(1, 3).toLocaleLowerCase('id-ID');
-          const endMonth = endMonthRaw.charAt(0).toLocaleUpperCase('id-ID') + endMonthRaw.slice(1, 3).toLocaleLowerCase('id-ID');
-          if (startMonth.toLocaleLowerCase('id-ID') === endMonth.toLocaleLowerCase('id-ID') && startYear === endYear) {
-            periodLabel = startDay + '-' + endDay + ' ' + endMonth + ' ' + endYear;
-          } else if (startYear === endYear) {
-            periodLabel = startDay + ' ' + startMonth + ' - ' + endDay + ' ' + endMonth + ' ' + endYear;
+
+        const compactSameYear = rawPeriod.match(/^(\\d{2})-(\\d{2})\\s+s\\.d\\.\\s+(\\d{2})-(\\d{2})-(\\d{4})$/i);
+        const compactCrossYear = rawPeriod.match(/^(\\d{2})-(\\d{2})-(\\d{4})\\s+s\\.d\\.\\s+(\\d{2})-(\\d{2})-(\\d{4})$/i);
+        const legacyPeriod = rawPeriod.match(/^(\\d{1,2})-([A-Za-z]{3})-(\\d{4})\\s*[–-]\\s*(\\d{1,2})-([A-Za-z]{3})-(\\d{4})$/i);
+
+        if (compactSameYear) {
+          periodLabel = rawPeriod;
+        } else if (compactCrossYear) {
+          periodLabel = rawPeriod;
+        } else if (legacyPeriod) {
+          const [, sd, sm, sy, ed, em, ey] = legacyPeriod;
+          const monthNumber = function (month) {
+            const names = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+            return String(names.findIndex((name) => name.toLocaleLowerCase('id-ID') === month.toLocaleLowerCase('id-ID')) + 1).padStart(2, '0');
+          };
+          const startMonth = monthNumber(sm);
+          const endMonth = monthNumber(em);
+          if (sy === ey) {
+            periodLabel = sd.padStart(2, '0') + '-' + startMonth + ' s.d. ' + ed.padStart(2, '0') + '-' + endMonth + ' ' + ey;
           } else {
-            periodLabel = startDay + ' ' + startMonth + ' ' + startYear + ' - ' + endDay + ' ' + endMonth + ' ' + endYear;
+            periodLabel = sd.padStart(2, '0') + '-' + startMonth + '-' + sy + ' s.d. ' + ed.padStart(2, '0') + '-' + endMonth + '-' + ey;
           }
         }
-        const label = 'Pencairan Sewa ' + vehicleType;
-        const periodDescription = periodLabel ? 'Periode ' + periodLabel : '';
+
+        const label = 'Pencairan Sewa ' + unitCount + ' Unit ' + vehicleType;
         return {
           category: label,
           title: targetAccount || label,
           isReal: false,
-          descriptions: [label, periodDescription, '']
+          descriptions: [label, periodLabel, '']
         };
       }
-
       if (/^Lain-lain\s*:/i.test(source)) {
         const detail = titleCaseIndonesian(extractOtherDescription(source));
         const label = /^pembayaran\b/i.test(detail) ? detail : 'Pembayaran ' + detail;
