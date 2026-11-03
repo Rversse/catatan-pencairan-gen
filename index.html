@@ -676,7 +676,7 @@
         return line.trim() !== '';
       });
       if (!firstLine || firstLine.includes(' · ')) return '';
-      const headerMatch = firstLine.trim().match(/^(.*),\s*(\d{2}[- ](?:Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)[- ]\d{4})$/i);
+      const headerMatch = firstLine.trim().match(/^(.*),\s*(\d{2}[- ](?:Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)[- ]\d{4})(?:\s*\(\d+\))?$/i);
       return headerMatch ? headerMatch[1].trim() : '';
     }
 
@@ -909,7 +909,7 @@
         const line = rawLine.trim();
         if (!line) return;
 
-        const headerMatch = line.match(/^(.*),\s*(\d{2}[- ](?:Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)[- ]\d{4})$/i);
+        const headerMatch = line.match(/^(.*),\s*(\d{2}[- ](?:Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)[- ]\d{4})(?:\s*\(\d+\))?$/i);
         if (headerMatch && !line.includes(' · ')) {
           kitchen = headerMatch[1].trim() || kitchen;
           date = headerMatch[2];
