@@ -1152,8 +1152,10 @@
       decodedKitchen = getFirstRowKitchen(cleanedSource);
       // Date-format switching is available for every kitchen when a supported
       // date exists in the decoded output; it is not tied to bank configuration.
-      const showDateFormatButton = hasConvertibleDate(parsed.cards);
-      dateFormatBtn.hidden = sourcePending || !showDateFormatButton;
+      // Keep the switch available whenever decoded transactions exist.
+      // Some source variants carry dates only in descriptions, so visibility
+      // must not depend on a narrowly parsed card.date value.
+      dateFormatBtn.hidden = sourcePending || parsed.cards.length === 0;
       dateFormatBtn.disabled = false;
       dateFormatBtn.textContent = useSpacedDateFormat ? 'DD MMM YYYY' : 'DD-MMM-YYYY';
       dateFormatBtn.title = 'Ganti format tanggal';
@@ -1232,7 +1234,7 @@
     }
 
     dateFormatBtn.addEventListener('click', function () {
-      if (!hasConvertibleDate(cards) || dateFormatBtn.hidden) return;
+      if (sourcePending || cards.length === 0) return;
       useSpacedDateFormat = !useSpacedDateFormat;
       dateFormatBtn.textContent = useSpacedDateFormat ? 'DD MMM YYYY' : 'DD-MMM-YYYY';
       cards = cards.map(function (card) {
@@ -1260,7 +1262,7 @@
       sourcePending = sourceInput.value.trim() !== decodedSource;
       decodeBtn.textContent = sourcePending ? 'Decode perubahan' : 'Decode';
       copyInputBtn.disabled = !decodedSource || sourcePending || cards.length === 0;
-      dateFormatBtn.hidden = sourcePending || !hasConvertibleDate(cards);
+      dateFormatBtn.hidden = sourcePending || cards.length === 0;
       updateProgress();
     });
 
