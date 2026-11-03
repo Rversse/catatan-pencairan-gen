@@ -797,26 +797,35 @@
         const rawPeriod = periodTextMatch ? periodTextMatch[1].trim() : '';
         let periodLabel = '';
 
-        const compactSameYear = rawPeriod.match(/^(\\d{2})-(\\d{2})\\s+s\\.d\\.\\s+(\\d{2})-(\\d{2})-(\\d{4})$/i);
-        const compactCrossYear = rawPeriod.match(/^(\\d{2})-(\\d{2})-(\\d{4})\\s+s\\.d\\.\\s+(\\d{2})-(\\d{2})-(\\d{4})$/i);
+        const compactSameYear = rawPeriod.match(/^(\\d{2})-([A-Za-z]{3})\\s+s\\.d\\.\\s+(\\d{2})-([A-Za-z]{3})-(\\d{4})$/i);
+        const compactCrossYear = rawPeriod.match(/^(\\d{2})-([A-Za-z]{3})-(\\d{4})\\s+s\\.d\\.\\s+(\\d{2})-([A-Za-z]{3})-(\\d{4})$/i);
+        const numericSameYear = rawPeriod.match(/^(\\d{2})-(\\d{2})\\s+s\\.d\\.\\s+(\\d{2})-(\\d{2})-(\\d{4})$/i);
+        const numericCrossYear = rawPeriod.match(/^(\\d{2})-(\\d{2})-(\\d{4})\\s+s\\.d\\.\\s+(\\d{2})-(\\d{2})-(\\d{4})$/i);
         const legacyPeriod = rawPeriod.match(/^(\\d{1,2})-([A-Za-z]{3})-(\\d{4})\\s*[–-]\\s*(\\d{1,2})-([A-Za-z]{3})-(\\d{4})$/i);
-
+        const monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+        const monthName = (month) => monthNames.find((name) => name.toLocaleLowerCase('id-ID') === month.toLocaleLowerCase('id-ID')) || '';
         if (compactSameYear) {
           periodLabel = rawPeriod;
         } else if (compactCrossYear) {
           periodLabel = rawPeriod;
+        } else if (numericSameYear || numericCrossYear) {
+          const match = numericSameYear || numericCrossYear;
+          const [, sd, sm, sy, ed, em, ey] = match;
+          const startMonth = monthNames[Number(sm) - 1];
+          const endMonth = monthNames[Number(em) - 1];
+          if (startMonth && endMonth) {
+            periodLabel = numericSameYear
+              ? sd + '-' + startMonth + ' s.d. ' + ed + '-' + endMonth + ' ' + ey
+              : sd + '-' + startMonth + '-' + sy + ' s.d. ' + ed + '-' + endMonth + '-' + ey;
+          }
         } else if (legacyPeriod) {
           const [, sd, sm, sy, ed, em, ey] = legacyPeriod;
-          const monthNumber = function (month) {
-            const names = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-            return String(names.findIndex((name) => name.toLocaleLowerCase('id-ID') === month.toLocaleLowerCase('id-ID')) + 1).padStart(2, '0');
-          };
-          const startMonth = monthNumber(sm);
-          const endMonth = monthNumber(em);
-          if (sy === ey) {
-            periodLabel = sd.padStart(2, '0') + '-' + startMonth + ' s.d. ' + ed.padStart(2, '0') + '-' + endMonth + ' ' + ey;
-          } else {
-            periodLabel = sd.padStart(2, '0') + '-' + startMonth + '-' + sy + ' s.d. ' + ed.padStart(2, '0') + '-' + endMonth + '-' + ey;
+          const startMonth = monthName(sm);
+          const endMonth = monthName(em);
+          if (startMonth && endMonth) {
+            periodLabel = sy === ey
+              ? sd.padStart(2, '0') + '-' + startMonth + ' s.d. ' + ed.padStart(2, '0') + '-' + endMonth + ' ' + ey
+              : sd.padStart(2, '0') + '-' + startMonth + '-' + sy + ' s.d. ' + ed.padStart(2, '0') + '-' + endMonth + '-' + ey;
           }
         }
 
@@ -825,7 +834,7 @@
           category: label,
           title: targetAccount || label,
           isReal: false,
-          descriptions: [label, periodLabel, '']
+          descriptions: [label, periodLabel ? 'Periode ' + periodLabel : '', '']
         };
       }
       if (/^Lain-lain\s*:/i.test(source)) {
