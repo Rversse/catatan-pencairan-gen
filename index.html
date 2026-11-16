@@ -977,7 +977,9 @@
         };
         const rankDifference = rank(left) - rank(right);
         if (rankDifference !== 0) return rankDifference;
-        if (!left.isVirtualAccount && !right.isVirtualAccount && rank(left) === 2 && left.bank !== right.bank) {
+
+        // Keep all non-primary banks alphabetically grouped after the VA card.
+        if (rank(left) === 2 && left.bank !== right.bank) {
           return left.bank.localeCompare(right.bank, 'id');
         }
         return left.sourceLineNo - right.sourceLineNo;
