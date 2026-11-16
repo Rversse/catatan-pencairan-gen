@@ -766,7 +766,7 @@
         const accountAndNote = source.match(/^OPS HARIAN\s*:\s*.*?\s-\s[A-Z][A-Z0-9 ]*\s\/\s[^\s·]+(?:\s·\s([\s\S]*))?$/i);
         const note = accountAndNote ? String(accountAndNote[1] || '').trim() : '';
         const isVirtualAccount = /(?:^|[ ·])VA(?:$|[ ·])/i.test(source);
-        const isArutalaNeutral = /koperasi arutala/i.test(targetAccount || source);
+        const isArutalaNeutral = /^Koperasi Arutala\s-\sBNI\s\/\s1985322260$/i.test(targetAccount);
         // Keep the marker visible in a description field while retaining the original transfer note.
         const cleanNote = note.replace(/(?:^|[ ·])VA(?:$|[ ·])/i, '').replace(/^Pembayaran\s+/i, '').trim();
         const descriptionLabel = isVirtualAccount
