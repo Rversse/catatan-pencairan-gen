@@ -765,13 +765,15 @@
         // parseOutput removes the final amount before this function runs.
         const accountAndNote = source.match(/^OPS HARIAN\s*:\s*.*?\s-\s[A-Z][A-Z0-9 ]*\s\/\s[^\s·]+(?:\s·\s([\s\S]*))?$/i);
         const note = accountAndNote ? String(accountAndNote[1] || '').trim() : '';
-        // Keep OPS HARIAN as the transaction category; only the description
-        // follows the Maker Catatan. Empty notes retain the existing default.
-        const cleanNote = note.replace(/^Pembayaran\s+/i, '').trim();
-        const descriptionLabel = cleanNote ? 'Pembayaran ' + cleanNote : 'Pembayaran Ops Harian';
+        const isVirtualAccount = /(?:^|[ ·])VA(?:$|[ ·])/i.test(source);
+        // Keep the marker visible in a description field while retaining the original transfer note.
+        const cleanNote = note.replace(/(?:^|[ ·])VA(?:$|[ ·])/i, '').replace(/^Pembayaran\s+/i, '').trim();
+        const descriptionLabel = isVirtualAccount
+          ? 'VA ' + (cleanNote ? 'Pembayaran ' + cleanNote : 'Pembayaran Ops Harian')
+          : cleanNote ? 'Pembayaran ' + cleanNote : 'Pembayaran Ops Harian';
         return {
-          category: 'OPS HARIAN',
-          title: targetAccount || 'OPS HARIAN',
+          category: isVirtualAccount ? 'Virtual Account' : 'OPS HARIAN',
+          title: isVirtualAccount ? 'Virtual Account' : targetAccount || 'OPS HARIAN',
           isReal: false,
           descriptions: buildDescriptionFields(descriptionLabel, date)
         };
@@ -940,6 +942,7 @@
           return;
         }
 
+        const isVirtualAccount = /(?:^|[ ·])VA(?:$|[ ·])/i.test(rawDescription);
         const details = describeTransaction(rawDescription, kitchen, date);
         const cardId = 'line-' + (index + 1);
         const edit = edits[cardId] || {};
@@ -958,6 +961,7 @@
           title: details.title || details.category,
           bank: bank,
           isSecondaryBank: Boolean(primaryBank && bank && bank !== primaryBank),
+          isVirtualAccount: isVirtualAccount,
           isReal: details.isReal,
           descriptions: descriptions,
           amount: Object.prototype.hasOwnProperty.call(edit, 'amount') ? digitsOnly(edit.amount) : amount
@@ -967,12 +971,15 @@
       const primaryBank = getPrimaryBank(kitchen);
       parsedCards.sort(function (left, right) {
         const rank = function (card) {
-          if (!card.bank) return 2;
-          return card.bank === primaryBank ? 0 : 1;
+          if (card.isVirtualAccount) return 1;
+          if (!card.bank) return 3;
+          return card.bank === primaryBank ? 0 : 2;
         };
         const rankDifference = rank(left) - rank(right);
         if (rankDifference !== 0) return rankDifference;
-        if (rank(left) === 1 && left.bank !== right.bank) {
+
+        // Keep all non-primary banks alphabetically grouped after the VA card.
+        if (rank(left) === 2 && left.bank !== right.bank) {
           return left.bank.localeCompare(right.bank, 'id');
         }
         return left.sourceLineNo - right.sourceLineNo;
@@ -1099,7 +1106,7 @@
             '</div>' +
           '</div>';
 
-        return '<article class="payment-card' + (done ? ' is-done' : '') + (card.isSecondaryBank ? ' is-secondary-bank' : '') + (card.id === latestCopiedCardId ? ' is-latest-copy' : '') + '" style="--card-index:' + index + '" data-card-id="' + escapeHtml(card.id) + '">' +
+        return '<article class="payment-card' + (done ? ' is-done' : '') + (card.isVirtualAccount ? ' is-virtual-account' : '') + (!card.isVirtualAccount && card.isSecondaryBank ? ' is-secondary-bank' : '') + (card.id === latestCopiedCardId ? ' is-latest-copy' : '') + '" style="--card-index:' + index + '" data-card-id="' + escapeHtml(card.id) + '">' +
           '<div class="card-top">' +
             '<div class="number">' + String(index + 1).padStart(2, '0') + '</div>' +
             '<div class="card-head">' +
