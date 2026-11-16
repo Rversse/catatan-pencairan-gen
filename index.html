@@ -773,8 +773,8 @@
           ? 'VA ' + (cleanNote ? 'Pembayaran ' + cleanNote : 'Pembayaran Ops Harian')
           : cleanNote ? 'Pembayaran ' + cleanNote : 'Pembayaran Ops Harian';
         return {
-          category: isVirtualAccount ? 'Virtual Account' : isArutalaNeutral ? 'OPS HARIAN / NEUTRAL' : 'OPS HARIAN',
-          title: isVirtualAccount ? 'Virtual Account' : isArutalaNeutral ? 'Koperasi Arutala — NEUTRAL' : targetAccount || 'OPS HARIAN',
+          category: isVirtualAccount ? 'Virtual Account' : 'OPS HARIAN',
+          title: isVirtualAccount ? 'Virtual Account' : targetAccount || 'OPS HARIAN',
           isNeutral: isArutalaNeutral && !isVirtualAccount,
           isReal: false,
           descriptions: buildDescriptionFields(descriptionLabel, date)
@@ -797,8 +797,8 @@
         const isArutalaNeutral = /^Koperasi Arutala\s-\sBNI\s\/\s1985322260$/i.test(targetAccount);
         if (isArutalaNeutral) {
           return {
-            category: 'OPS HARIAN / NEUTRAL',
-            title: 'Koperasi Arutala — NEUTRAL',
+            category: 'OPS HARIAN',
+            title: targetAccount || 'OPS HARIAN',
             isNeutral: true,
             isReal: false,
             descriptions: buildDescriptionFields('Pembayaran ' + titleCaseIndonesian(extractOtherDescription(source)), date)
@@ -1063,7 +1063,7 @@
             '</div>' +
           '</div>';
 
-        return '<article class="payment-card' + (done ? ' is-done' : '') + (card.isVirtualAccount ? ' is-virtual-account' : '') + (!card.isVirtualAccount && card.isSecondaryBank ? ' is-secondary-bank' : '') + (card.isNeutral ? ' is-neutral' : '') + (card.id === latestCopiedCardId ? ' is-latest-copy' : '') + '" style="--card-index:' + index + '" data-card-id="' + escapeHtml(card.id) + '">' +
+        return '<article class="payment-card' + (done ? ' is-done' : '') + (card.isVirtualAccount ? ' is-virtual-account' : '') + (!card.isVirtualAccount && card.isSecondaryBank ? ' is-secondary-bank' : '') + (card.id === latestCopiedCardId ? ' is-latest-copy' : '') + '" style="--card-index:' + index + '" data-card-id="' + escapeHtml(card.id) + '">' +
           '<div class="card-top">' +
             '<div class="number">' + String(index + 1).padStart(2, '0') + '</div>' +
             '<div class="card-head">' +
