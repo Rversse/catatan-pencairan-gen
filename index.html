@@ -765,13 +765,15 @@
         // parseOutput removes the final amount before this function runs.
         const accountAndNote = source.match(/^OPS HARIAN\s*:\s*.*?\s-\s[A-Z][A-Z0-9 ]*\s\/\s[^\s·]+(?:\s·\s([\s\S]*))?$/i);
         const note = accountAndNote ? String(accountAndNote[1] || '').trim() : '';
-        // Keep OPS HARIAN as the transaction category; only the description
-        // follows the Maker Catatan. Empty notes retain the existing default.
-        const cleanNote = note.replace(/^Pembayaran\s+/i, '').trim();
-        const descriptionLabel = cleanNote ? 'Pembayaran ' + cleanNote : 'Pembayaran Ops Harian';
+        const isVirtualAccount = /(?:^|[ ·])VA(?:$|[ ·])/i.test(source);
+        // Keep the marker visible in a description field while retaining the original transfer note.
+        const cleanNote = note.replace(/(?:^|[ ·])VA(?:$|[ ·])/i, '').replace(/^Pembayaran\s+/i, '').trim();
+        const descriptionLabel = isVirtualAccount
+          ? 'VA ' + (cleanNote ? 'Pembayaran ' + cleanNote : 'Pembayaran Ops Harian')
+          : cleanNote ? 'Pembayaran ' + cleanNote : 'Pembayaran Ops Harian';
         return {
-          category: 'OPS HARIAN',
-          title: targetAccount || 'OPS HARIAN',
+          category: isVirtualAccount ? 'Virtual Account' : 'OPS HARIAN',
+          title: isVirtualAccount ? 'Virtual Account' : targetAccount || 'OPS HARIAN',
           isReal: false,
           descriptions: buildDescriptionFields(descriptionLabel, date)
         };
