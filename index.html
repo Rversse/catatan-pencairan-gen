@@ -794,6 +794,16 @@
       }
 
       if (/^Lain-lain\s*:/i.test(source)) {
+        const isArutalaNeutral = /^Koperasi Arutala\s-\sBNI\s\/\s1985322260$/i.test(targetAccount);
+        if (isArutalaNeutral) {
+          return {
+            category: 'OPS HARIAN / NEUTRAL',
+            title: 'Koperasi Arutala — NEUTRAL',
+            isNeutral: true,
+            isReal: false,
+            descriptions: buildDescriptionFields('Pembayaran ' + titleCaseIndonesian(extractOtherDescription(source)), date)
+          };
+        }
         const detail = titleCaseIndonesian(extractOtherDescription(source));
         const label = /^pembayaran\b/i.test(detail) ? detail : 'Pembayaran ' + detail;
         return { category: label, title: targetAccount || label, isReal: false, descriptions: buildDescriptionFields(label, date) };
