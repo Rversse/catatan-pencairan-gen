@@ -766,14 +766,16 @@
         const accountAndNote = source.match(/^OPS HARIAN\s*:\s*.*?\s-\s[A-Z][A-Z0-9 ]*\s\/\s[^\s·]+(?:\s·\s([\s\S]*))?$/i);
         const note = accountAndNote ? String(accountAndNote[1] || '').trim() : '';
         const isVirtualAccount = /(?:^|[ ·])VA(?:$|[ ·])/i.test(source);
+        const isArutalaNeutral = /koperasi arutala/i.test(targetAccount || source);
         // Keep the marker visible in a description field while retaining the original transfer note.
         const cleanNote = note.replace(/(?:^|[ ·])VA(?:$|[ ·])/i, '').replace(/^Pembayaran\s+/i, '').trim();
         const descriptionLabel = isVirtualAccount
           ? 'VA ' + (cleanNote ? 'Pembayaran ' + cleanNote : 'Pembayaran Ops Harian')
           : cleanNote ? 'Pembayaran ' + cleanNote : 'Pembayaran Ops Harian';
         return {
-          category: isVirtualAccount ? 'Virtual Account' : 'OPS HARIAN',
-          title: isVirtualAccount ? 'Virtual Account' : targetAccount || 'OPS HARIAN',
+          category: isVirtualAccount ? 'Virtual Account' : isArutalaNeutral ? 'OPS HARIAN / NEUTRAL' : 'OPS HARIAN',
+          title: isVirtualAccount ? 'Virtual Account' : isArutalaNeutral ? 'Koperasi Arutala — NEUTRAL' : targetAccount || 'OPS HARIAN',
+          isNeutral: isArutalaNeutral && !isVirtualAccount,
           isReal: false,
           descriptions: buildDescriptionFields(descriptionLabel, date)
         };
@@ -791,64 +793,6 @@
         };
       }
 
-      if (/^Sewa Kendaraan\b/i.test(source)) {
-        // Maker format: "Sewa Kendaraan 2 UNIT MOBIL (09-11 s.d. 13-11-2026)".
-        // Also accept the legacy "Sewa Kendaraan Mobil (09-Nov-2026 - 13-Nov-2026)".
-        const vehicleMatch = source.match(/^Sewa Kendaraan\s+(?:(\d+)\s+UNIT\s+)?(Mobil|Motor)\b/i);
-        const unitCount = vehicleMatch && vehicleMatch[1] ? String(Number(vehicleMatch[1])) : '1';
-        const vehicleType = vehicleMatch
-          ? vehicleMatch[2].toLocaleLowerCase('id-ID') === 'mobil' ? 'Mobil' : 'Motor'
-          : '';
-
-        const periodTextMatch = source.match(/\(([^()]*)\)/);
-        const rawPeriod = periodTextMatch ? periodTextMatch[1].trim() : '';
-        let periodLabel = '';
-
-        const compactSameMonth = rawPeriod.match(/^(\d{2})-(\d{2})\s+([A-Za-z]{3})\s+(\d{4})$/i);
-        const compactSameYear = rawPeriod.match(/^(\d{2})-([A-Za-z]{3})\s+s\.d\.\s+(\d{2})-([A-Za-z]{3})-(\d{4})$/i);
-        const compactCrossYear = rawPeriod.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})\s+s\.d\.\s+(\d{2})-([A-Za-z]{3})-(\d{4})$/i);
-        const numericSameYear = rawPeriod.match(/^(\d{2})-(\d{2})\s+s\.d\.\s+(\d{2})-(\d{2})-(\d{4})$/i);
-        const numericCrossYear = rawPeriod.match(/^(\d{2})-(\d{2})-(\d{4})\s+s\.d\.\s+(\d{2})-(\d{2})-(\d{4})$/i);
-        const legacyPeriod = rawPeriod.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})\s*[–-]\s*(\d{1,2})-([A-Za-z]{3})-(\d{4})$/i);
-        const monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-        const monthName = (month) => monthNames.find((name) => name.toLocaleLowerCase('id-ID') === month.toLocaleLowerCase('id-ID')) || '';
-        if (compactSameMonth) {
-          const [, startDay, endDay, month, year] = compactSameMonth;
-          const normalizedMonth = monthName(month);
-          if (normalizedMonth) periodLabel = startDay + '-' + endDay + ' ' + normalizedMonth + ' ' + year;
-        } else if (compactSameYear) {
-          periodLabel = rawPeriod;
-        } else if (compactCrossYear) {
-          periodLabel = rawPeriod;
-        } else if (numericSameYear || numericCrossYear) {
-          const match = numericSameYear || numericCrossYear;
-          const [, sd, sm, sy, ed, em, ey] = match;
-          const startMonth = monthNames[Number(sm) - 1];
-          const endMonth = monthNames[Number(em) - 1];
-          if (startMonth && endMonth) {
-            periodLabel = numericSameYear
-              ? sd + '-' + startMonth + ' s.d. ' + ed + '-' + endMonth + ' ' + ey
-              : sd + '-' + startMonth + '-' + sy + ' s.d. ' + ed + '-' + endMonth + '-' + ey;
-          }
-        } else if (legacyPeriod) {
-          const [, sd, sm, sy, ed, em, ey] = legacyPeriod;
-          const startMonth = monthName(sm);
-          const endMonth = monthName(em);
-          if (startMonth && endMonth) {
-            periodLabel = sy === ey
-              ? sd.padStart(2, '0') + '-' + startMonth + ' s.d. ' + ed.padStart(2, '0') + '-' + endMonth + ' ' + ey
-              : sd.padStart(2, '0') + '-' + startMonth + '-' + sy + ' s.d. ' + ed.padStart(2, '0') + '-' + endMonth + '-' + ey;
-          }
-        }
-
-        const label = 'Pencairan Sewa ' + unitCount + ' Unit ' + vehicleType;
-        return {
-          category: label,
-          title: targetAccount || label,
-          isReal: false,
-          descriptions: [label, periodLabel ? 'Periode ' + periodLabel : '', '']
-        };
-      }
       if (/^Lain-lain\s*:/i.test(source)) {
         const detail = titleCaseIndonesian(extractOtherDescription(source));
         const label = /^pembayaran\b/i.test(detail) ? detail : 'Pembayaran ' + detail;
@@ -929,6 +873,8 @@
         // OPS Real is a realization note, not a payment to record in Catatan Pencairan.
         // Skip silently: no card and no "ignored line" warning.
         if (/^_?OPS(?:\s*\/\s*|\s+)Real_?$/i.test(rawDescription)) return;
+        // Sewa Kendaraan has been retired; ignore legacy lines without generating cards.
+        if (/^SEWA KENDARAAN\b/i.test(rawDescription)) return;
 
         const amountText = line.slice(separatorIndex + 3).trim();
         if (!rawDescription || !/^\d[\d.,\s]*$/.test(amountText)) {
@@ -962,6 +908,7 @@
           bank: bank,
           isSecondaryBank: Boolean(primaryBank && bank && bank !== primaryBank),
           isVirtualAccount: isVirtualAccount,
+          isNeutral: Boolean(details.isNeutral),
           isReal: details.isReal,
           descriptions: descriptions,
           amount: Object.prototype.hasOwnProperty.call(edit, 'amount') ? digitsOnly(edit.amount) : amount
@@ -1106,7 +1053,7 @@
             '</div>' +
           '</div>';
 
-        return '<article class="payment-card' + (done ? ' is-done' : '') + (card.isVirtualAccount ? ' is-virtual-account' : '') + (!card.isVirtualAccount && card.isSecondaryBank ? ' is-secondary-bank' : '') + (card.id === latestCopiedCardId ? ' is-latest-copy' : '') + '" style="--card-index:' + index + '" data-card-id="' + escapeHtml(card.id) + '">' +
+        return '<article class="payment-card' + (done ? ' is-done' : '') + (card.isVirtualAccount ? ' is-virtual-account' : '') + (!card.isVirtualAccount && card.isSecondaryBank ? ' is-secondary-bank' : '') + (card.isNeutral ? ' is-neutral' : '') + (card.id === latestCopiedCardId ? ' is-latest-copy' : '') + '" style="--card-index:' + index + '" data-card-id="' + escapeHtml(card.id) + '">' +
           '<div class="card-top">' +
             '<div class="number">' + String(index + 1).padStart(2, '0') + '</div>' +
             '<div class="card-head">' +
