@@ -940,6 +940,7 @@
           return;
         }
 
+        const isVirtualAccount = /(?:^|[ ·])VA(?:$|[ ·])/i.test(rawDescription);
         const details = describeTransaction(rawDescription, kitchen, date);
         const cardId = 'line-' + (index + 1);
         const edit = edits[cardId] || {};
@@ -958,6 +959,7 @@
           title: details.title || details.category,
           bank: bank,
           isSecondaryBank: Boolean(primaryBank && bank && bank !== primaryBank),
+          isVirtualAccount: isVirtualAccount,
           isReal: details.isReal,
           descriptions: descriptions,
           amount: Object.prototype.hasOwnProperty.call(edit, 'amount') ? digitsOnly(edit.amount) : amount
@@ -967,12 +969,13 @@
       const primaryBank = getPrimaryBank(kitchen);
       parsedCards.sort(function (left, right) {
         const rank = function (card) {
-          if (!card.bank) return 2;
-          return card.bank === primaryBank ? 0 : 1;
+          if (card.isVirtualAccount) return 1;
+          if (!card.bank) return 3;
+          return card.bank === primaryBank ? 0 : 2;
         };
         const rankDifference = rank(left) - rank(right);
         if (rankDifference !== 0) return rankDifference;
-        if (rank(left) === 1 && left.bank !== right.bank) {
+        if (!left.isVirtualAccount && !right.isVirtualAccount && rank(left) === 2 && left.bank !== right.bank) {
           return left.bank.localeCompare(right.bank, 'id');
         }
         return left.sourceLineNo - right.sourceLineNo;
@@ -1099,7 +1102,7 @@
             '</div>' +
           '</div>';
 
-        return '<article class="payment-card' + (done ? ' is-done' : '') + (card.isSecondaryBank ? ' is-secondary-bank' : '') + (card.id === latestCopiedCardId ? ' is-latest-copy' : '') + '" style="--card-index:' + index + '" data-card-id="' + escapeHtml(card.id) + '">' +
+        return '<article class="payment-card' + (done ? ' is-done' : '') + (card.isVirtualAccount ? ' is-virtual-account' : '') + (!card.isVirtualAccount && card.isSecondaryBank ? ' is-secondary-bank' : '') + (card.id === latestCopiedCardId ? ' is-latest-copy' : '') + '" style="--card-index:' + index + '" data-card-id="' + escapeHtml(card.id) + '">' +
           '<div class="card-top">' +
             '<div class="number">' + String(index + 1).padStart(2, '0') + '</div>' +
             '<div class="card-head">' +
