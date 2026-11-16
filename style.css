@@ -454,3 +454,23 @@ textarea[readonly]::selection {
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.16), var(--shadow);
 }
+
+/* VA transfers have a dedicated route; completed cards remain red. */
+.payment-card.is-virtual-account:not(.is-done) {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.14);
+}
+.payment-card.is-virtual-account:not(.is-done):hover {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.16), var(--shadow);
+}
+
+/* Completed/cashed transfers are red; blue remains reserved for secondary banks. */
+.payment-card.is-done {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.14);
+}
+.payment-card.is-done:hover {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.16), var(--shadow);
+}
