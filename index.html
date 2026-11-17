@@ -158,6 +158,17 @@
     .card-name-row { justify-content:center; }
     .card-category { font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:.025em; text-align:center; }
     .card-context { font-size:10px; margin-top:2px; text-align:center; }
+    .card-account-context {
+      display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:7px;
+      margin-top:4px; color:#475467; font-size:12px; font-weight:750;
+      font-variant-numeric:tabular-nums; letter-spacing:.015em;
+    }
+    .card-bank {
+      display:inline-flex; align-items:center; border:1px solid #dbe3f2;
+      border-radius:6px; padding:2px 6px; background:#f4f6fb;
+      color:#344054; font-size:10px; font-weight:850; letter-spacing:.04em;
+    }
+    .card-account-number { color:#3449c5; overflow-wrap:anywhere; }
     .kind-pill { display:none !important; }
     .fields { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:10px; }
     .field-group { min-width:0; }
@@ -651,6 +662,13 @@
       return normalizeBankName(bankText);
     }
 
+    // Keep destination identifiers as strings so leading zeroes are preserved.
+    function extractAccountNumber(rawDescription) {
+      const firstSegment = String(rawDescription || '').split(' · ')[0].trim();
+      const match = firstSegment.match(/\s-\s[A-Z][A-Z0-9 ]*\s\/\s([^\s]+)\s*$/i);
+      return match ? match[1].trim() : '';
+    }
+
     function getPrimaryBank(kitchen) {
       const name = String(kitchen || '').trim().toLocaleLowerCase('id-ID');
       if (name === 'cihaur' || name === 'sukaraja') return 'BRI';
@@ -907,6 +925,7 @@
           : details.descriptions.slice(0, 3);
 
         const bank = extractBankName(rawDescription);
+        const accountNumber = extractAccountNumber(rawDescription);
         const primaryBank = getPrimaryBank(kitchen);
         parsedCards.push({
           id: cardId,
@@ -914,8 +933,9 @@
           kitchen: kitchen,
           date: date,
           category: details.category,
-          title: details.title || details.category,
+          title: isVirtualAccount ? 'Virtual Account' : (details.title || details.category),
           bank: bank,
+          accountNumber: accountNumber,
           isSecondaryBank: Boolean(primaryBank && bank && bank !== primaryBank),
           isVirtualAccount: isVirtualAccount,
           isNeutral: Boolean(details.isNeutral),
@@ -1068,6 +1088,9 @@
             '<div class="number">' + String(index + 1).padStart(2, '0') + '</div>' +
             '<div class="card-head">' +
               '<div class="card-name-row"><span class="card-category" title="' + escapeHtml(card.title || card.category) + '">' + escapeHtml(card.title || card.category) + '</span></div>' +
+              (card.isVirtualAccount && card.accountNumber
+                ? '<div class="card-account-context"><span class="card-bank">' + escapeHtml(card.bank || 'BANK TIDAK DIKENALI') + '</span><span aria-hidden="true">·</span><span class="card-account-number">' + escapeHtml(card.accountNumber) + '</span></div>'
+                : '') +
               '<div class="card-context">' + escapeHtml(card.kitchen) + ' <span aria-hidden="true">·</span> ' + escapeHtml(formatOutputDate(card.date)) + '</div>' +
             '</div>' +
             '<span class="status-dot" aria-label="' + escapeHtml(statusLabel) + '" title="' + escapeHtml(statusLabel) + '"></span>' +
