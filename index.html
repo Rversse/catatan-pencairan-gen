@@ -753,16 +753,24 @@
         };
       }
 
-      if (/^RAB\s*:/i.test(source)) {
+      if (/^RAB(?:\s+B3)?\s*:/i.test(source)) {
+        const isB3 = /^RAB\s+B3\s*:/i.test(source);
         const segments = source.split(' · ');
         // parseOutput removes the final " · nominal" before this function runs,
         // so every segment after the destination account belongs to product details.
         const productText = segments.length > 1 ? segments.slice(1).join(' · ').trim() : '';
         const products = parseNaturalProductList(productText);
-        const label = products.length
+        const baseLabel = products.length
           ? 'Pembayaran ' + joinNatural(products)
           : 'Pembayaran Bahan Baku';
-        return { category: label, title: targetAccount || label, isReal: false, descriptions: products.length ? buildProductDescriptionFields(products, date) : buildDescriptionFields(label, date) };
+        const label = isB3 ? 'Pembayaran B3 ' + (products.length ? joinNatural(products) : 'Bahan Baku') : baseLabel;
+        return {
+          category: label,
+          title: (isB3 ? 'B3 · ' : '') + (targetAccount || label),
+          isB3: isB3,
+          isReal: false,
+          descriptions: products.length ? buildProductDescriptionFields(products, date) : buildDescriptionFields(label, date)
+        };
       }
 
       if (/^GAS\s*:/i.test(source)) {
@@ -944,6 +952,7 @@
           accountNumber: accountNumber,
           isSecondaryBank: Boolean(primaryBank && bank && bank !== primaryBank),
           isVirtualAccount: isVirtualAccount,
+          isB3: Boolean(details.isB3),
           isNeutral: Boolean(details.isNeutral),
           isReal: details.isReal,
           descriptions: descriptions,
