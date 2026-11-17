@@ -785,11 +785,17 @@
         const note = accountAndNote ? String(accountAndNote[1] || '').trim() : '';
         const isVirtualAccount = /(?:^|[ ·])VA(?:$|[ ·])/i.test(source);
         const isArutalaNeutral = /^Koperasi Arutala\s-\sBNI\s\/\s1985322260$/i.test(targetAccount);
-        // Keep the marker visible in a description field while retaining the original transfer note.
-        const cleanNote = note.replace(/(?:^|[ ·])VA(?:$|[ ·])/i, '').replace(/^Pembayaran\s+/i, '').trim();
-        const descriptionLabel = isVirtualAccount
-          ? 'VA ' + (cleanNote ? 'Pembayaran ' + cleanNote : 'Pembayaran Ops Harian')
-          : cleanNote ? 'Pembayaran ' + cleanNote : 'Pembayaran Ops Harian';
+        // VA is a card-level payment marker, not part of the autofill description.
+        // Remove it as a complete segment so no stray separator remains.
+        const cleanNote = note.split(' · ')
+          .map(function (part) { return part.trim(); })
+          .filter(function (part) { return part && !/^VA$/i.test(part); })
+          .join(' · ')
+          .replace(/^Pembayaran\s+/i, '')
+          .trim();
+        const descriptionLabel = cleanNote
+          ? 'Pembayaran ' + cleanNote
+          : 'Pembayaran Ops Harian';
         return {
           category: isVirtualAccount ? 'Virtual Account' : 'OPS HARIAN',
           title: isVirtualAccount ? 'Virtual Account' : targetAccount || 'OPS HARIAN',
