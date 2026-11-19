@@ -425,6 +425,78 @@
     let sourcePending = false;
     let useSpacedDateFormat = false;
     let decodedKitchen = '';
+    let makerImportValidatedText = '';
+    let makerImportMode = false;
+
+    function setWorkflowMode(mode) {
+      makerImportMode = mode === 'maker';
+      fieldGeneratorPane.hidden = makerImportMode;
+      makerImportPane.hidden = !makerImportMode;
+      outputGeneratorPanel.hidden = makerImportMode;
+      fieldGeneratorTab.setAttribute('aria-selected', String(!makerImportMode));
+      makerImportTab.setAttribute('aria-selected', String(makerImportMode));
+      if (!makerImportMode) {
+        sourceInput.focus();
+      } else {
+        makerImportInput.focus();
+      }
+    }
+
+    function validateMakerSource(source) {
+      const text = String(source || '').replace(/\\r\\n?/g, '\\n').trim();
+      if (!text) return { error: 'Tempel output Maker terlebih dahulu.', text: '', kitchen: '', date: '', rows: [] };
+      const lines = text.split('\\n').map(line => line.trim()).filter(Boolean);
+      const header = lines[0].match(/^(.+?),\\s*(\\d{1,2}-(?:Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)-\\d{4})(?:\\s*\\(\\d+\\))?$/i);
+      if (!header) {
+        return { error: 'Header harus berformat NamaDapur, DD-MMM-YYYY.', text, kitchen: '', date: '', rows: [] };
+      }
+      const rows = [];
+      const allowed = /^(RAB(?: B3)?|GAS|OPS HARIAN|INSENTIF FASILITAS SPPG|SEWA SPPG|GAJI RELAWAN|INSENTIF PIC SEKOLAH|INSENTIF PIC POSYANDU|INSENTIF KADER|SEWA KENDARAAN|LAIN-LAIN|INSENTIF SPPG)\\s*:/i;
+      for (let index = 1; index < lines.length; index++) {
+        const line = lines[index];
+        const amountDivider = line.lastIndexOf('·');
+        if (amountDivider < 0) {
+          return { error: 'Baris ' + (index + 1) + ' tidak memiliki pemisah nominal (·).', text, kitchen: header[1], date: header[2], rows };
+        }
+        const beforeAmount = line.slice(0, amountDivider).trim();
+        const amountText = line.slice(amountDivider + 1).trim();
+        if (!allowed.test(beforeAmount)) {
+          return { error: 'Kategori transaksi pada baris ' + (index + 1) + ' tidak dikenali.', text, kitchen: header[1], date: header[2], rows };
+        }
+        if (!/^(?:\\d+|\\d{1,3}(?:\\.\\d{3})+)$/.test(amountText) || Number(amountText.replace(/\\./g, '')) <= 0) {
+          return { error: 'Nominal pada baris ' + (index + 1) + ' tidak valid. Gunakan angka Rupiah dengan pemisah titik.', text, kitchen: header[1], date: header[2], rows };
+        }
+        const label = beforeAmount.slice(0, beforeAmount.indexOf(':')).trim().toUpperCase();
+        const body = beforeAmount.slice(beforeAmount.indexOf(':') + 1).trim();
+        if (!body || !/\\s-\\s[A-Za-z][A-Za-z0-9 ]*\\s*\\/\\s*[^\\s·]+$/.test(body)) {
+          return { error: 'Identitas rekening pada baris ' + (index + 1) + ' tidak valid. Periksa penerima, bank, dan nomor rekening.', text, kitchen: header[1], date: header[2], rows };
+        }
+        if (label === 'OPS HARIAN') {
+          // Details after the account marker are optional by design.
+          rows.push({ line, label, amount: amountText, hasDetails: /\\s·\\s.+$/.test(body) });
+        } else {
+          rows.push({ line, label, amount: amountText, hasDetails: true });
+        }
+      }
+      if (!rows.length) return { error: 'Belum ada baris transaksi dengan nominal.', text, kitchen: header[1], date: header[2], rows };
+      return { error: '', text, kitchen: header[1], date: header[2], rows };
+    }
+
+    function setMakerImportNotice(message, isError) {
+      makerImportNotice.textContent = message;
+      makerImportNotice.hidden = !message;
+      makerImportNotice.classList.toggle('maker-import-error', Boolean(isError));
+    }
+
+    async function copyValidatedMakerOutput() {
+      if (!makerImportValidatedText) return;
+      try {
+        await writeClipboard(makerImportValidatedText);
+        setMakerImportNotice('Format valid. Seluruh baris berhasil disalin untuk ditempel ke SIM-SPPG.', false);
+      } catch (error) {
+        setMakerImportNotice('Gagal menyalin. Periksa izin clipboard browser.', true);
+      }
+    }
 
     function escapeHtml(value) {
       return String(value).replace(/[&<>"']/g, function (ch) {
@@ -1359,6 +1431,40 @@
         setDecodeNotice('Browser gagal menyalin input data. Coba gunakan HTTPS atau salin manual.');
       }
     });
+
+    fieldGeneratorTab.addEventListener('click', function () { setWorkflowMode('field'); });
+    makerImportTab.addEventListener('click', function () { setWorkflowMode('maker'); });
+    validateMakerBtn.addEventListener('click', function () {
+      const result = validateMakerSource(makerImportInput.value);
+      makerImportValidatedText = result.error ? '' : result.text;
+      copyMakerOutputBtn.disabled = !makerImportValidatedText;
+      makerImportMeta.hidden = Boolean(result.error);
+      makerImportMeta.innerHTML = result.error ? '' :
+        '<span class="maker-import-chip">' + escapeHtml(result.kitchen) + '</span>' +
+        '<span class="maker-import-chip">' + escapeHtml(result.date) + '</span>' +
+        '<span class="maker-import-chip">' + result.rows.length + ' transaksi</span>' +
+        '<span class="maker-import-chip">' + result.rows.filter(row => row.label === 'OPS HARIAN' && !row.hasDetails).length + ' OPS tanpa catatan</span>';
+      if (result.error) {
+        setMakerImportNotice(result.error, true);
+      } else {
+        setMakerImportNotice('Format valid. Output Maker siap disalin ke SIM-SPPG.', false);
+      }
+    });
+    clearMakerBtn.addEventListener('click', function () {
+      makerImportInput.value = '';
+      makerImportValidatedText = '';
+      copyMakerOutputBtn.disabled = true;
+      makerImportMeta.hidden = true;
+      setMakerImportNotice('', false);
+      makerImportInput.focus();
+    });
+    makerImportInput.addEventListener('input', function () {
+      makerImportValidatedText = '';
+      copyMakerOutputBtn.disabled = true;
+      makerImportMeta.hidden = true;
+      setMakerImportNotice('Input berubah. Periksa format lagi sebelum menyalin.', false);
+    });
+    copyMakerOutputBtn.addEventListener('click', function () { void copyValidatedMakerOutput(); });
 
     decodeBtn.addEventListener('click', function () {
       try {
