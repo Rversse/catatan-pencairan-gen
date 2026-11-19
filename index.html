@@ -323,6 +323,11 @@
 
   <main>
         <section class="panel" aria-labelledby="inputHeading">
+      <div class="workflow-tabs" role="tablist" aria-label="Mode input">
+        <button class="workflow-tab" id="fieldGeneratorTab" type="button" role="tab" aria-selected="true" aria-controls="fieldGeneratorPane">Generator Field</button>
+        <button class="workflow-tab" id="makerImportTab" type="button" role="tab" aria-selected="false" aria-controls="makerImportPane">Paste dari Maker</button>
+      </div>
+      <div id="fieldGeneratorPane">
       <div class="panel-heading"><h2 id="inputHeading">Input Data</h2><button class="btn btn-secondary" id="dateFormatBtn" type="button" aria-label="Ganti format tanggal" hidden>DD-MMM-YYYY</button></div>
       <textarea id="sourceInput" spellcheck="false"></textarea>
       <div class="input-tools">
@@ -334,9 +339,24 @@
       </div>
       <div class="notice info" id="decodeNotice" role="status" hidden></div>
       <div class="notice warning" id="pendingNotice" hidden>Ada perubahan input yang belum di-decode. Tekan Decode sebelum menyalin field transaksi.</div>
+      </div>
+      <div id="makerImportPane" hidden>
+        <div class="panel-heading"><div><h2>Paste Output Maker-Pencairan</h2><p class="subcopy">Tempel seluruh output dari Maker. Generator ini akan memeriksa struktur dan menyiapkan teks yang kompatibel dengan parser SIM-SPPG.</p></div></div>
+        <textarea id="makerImportInput" spellcheck="false" placeholder="Contoh: Campakamulya, 19-Nov-2026&#10;OPS HARIAN : Koperasi Arutala - BNI / 1985322260 · 1.200.000"></textarea>
+        <div class="input-tools">
+          <div class="button-row">
+            <button class="btn btn-primary" id="validateMakerBtn" type="button">Periksa Format</button>
+            <button class="btn btn-secondary" id="copyMakerOutputBtn" type="button" disabled>Copy untuk SIM-SPPG</button>
+            <button class="btn btn-secondary" id="clearMakerBtn" type="button">Clear</button>
+          </div>
+        </div>
+        <div class="notice info" id="makerImportNotice" role="status" hidden></div>
+        <div class="maker-import-meta" id="makerImportMeta" hidden></div>
+        <p class="maker-import-note">Catatan opsional pada OPS/GAS tidak dibuat-buat atau diwajibkan. Baris tanpa catatan tetap dipertahankan, nominal tetap harus ada.</p>
+      </div>
     </section>
 
-    <section aria-labelledby="cardsHeading">
+    <section id="outputGeneratorPanel" aria-labelledby="cardsHeading">
       <div class="stats">
         <div>
           <h2 id="cardsHeading">Output Pencairan</h2>
@@ -381,6 +401,17 @@
     const pendingNotice = document.getElementById('pendingNotice');
     const ignoredPanel = document.getElementById('ignoredPanel');
     const ignoredList = document.getElementById('ignoredList');
+    const makerImportNotice = document.getElementById('makerImportNotice');
+    const copyMakerOutputBtn = document.getElementById('copyMakerOutputBtn');
+    const makerImportTab = document.getElementById('makerImportTab');
+    const fieldGeneratorTab = document.getElementById('fieldGeneratorTab');
+    const makerImportPane = document.getElementById('makerImportPane');
+    const fieldGeneratorPane = document.getElementById('fieldGeneratorPane');
+    const makerImportInput = document.getElementById('makerImportInput');
+    const validateMakerBtn = document.getElementById('validateMakerBtn');
+    const clearMakerBtn = document.getElementById('clearMakerBtn');
+    const makerImportMeta = document.getElementById('makerImportMeta');
+    const outputGeneratorPanel = document.getElementById('outputGeneratorPanel');
 
     let decodedSource = '';
     let cards = [];
