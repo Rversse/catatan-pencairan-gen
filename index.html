@@ -148,13 +148,6 @@
     .ignored-panel h3 { margin:0 0 7px; font-size:12px; color:#89530a; }
     .ignored-panel ul { margin:0; padding-left:20px; color:#785e35; font:11px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap:anywhere; }
     footer { padding-top:28px; text-align:center; color:#7a8598; font-size:11px; }
-    .workflow-tabs { display:flex; gap:6px; margin:0 0 16px; border-bottom:1px solid #3b443c; }
-    .workflow-tab { border:0; border-bottom:2px solid transparent; border-radius:0; background:transparent; color:#a6afa6; padding:9px 12px; font-size:12px; font-weight:650; }
-    .workflow-tab[aria-selected="true"] { border-bottom-color:#8ba992; color:#e8ece7; background:transparent; }
-    .maker-import-note { margin:10px 0 0; color:#a6afa6; font-size:11px; line-height:1.5; }
-    .maker-import-meta { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
-    .maker-import-chip { border:1px solid #3b443c; border-radius:7px; padding:5px 8px; color:#c4ccc2; background:#252c27; font-size:11px; }
-    .maker-import-error { color:#dfb5ae; }
     /* Compact click-to-copy layout. */
     .panel { padding:16px; border-radius:15px; }
     .panel-heading { margin-bottom:10px; }
@@ -323,11 +316,6 @@
 
   <main>
         <section class="panel" aria-labelledby="inputHeading">
-      <div class="workflow-tabs" role="tablist" aria-label="Mode input">
-        <button class="workflow-tab" id="fieldGeneratorTab" type="button" role="tab" aria-selected="true" aria-controls="fieldGeneratorPane">Generator Field</button>
-        <button class="workflow-tab" id="makerImportTab" type="button" role="tab" aria-selected="false" aria-controls="makerImportPane">Paste dari Maker</button>
-      </div>
-      <div id="fieldGeneratorPane">
       <div class="panel-heading"><h2 id="inputHeading">Input Data</h2><button class="btn btn-secondary" id="dateFormatBtn" type="button" aria-label="Ganti format tanggal" hidden>DD-MMM-YYYY</button></div>
       <textarea id="sourceInput" spellcheck="false"></textarea>
       <div class="input-tools">
@@ -339,24 +327,9 @@
       </div>
       <div class="notice info" id="decodeNotice" role="status" hidden></div>
       <div class="notice warning" id="pendingNotice" hidden>Ada perubahan input yang belum di-decode. Tekan Decode sebelum menyalin field transaksi.</div>
-      </div>
-      <div id="makerImportPane" hidden>
-        <div class="panel-heading"><div><h2>Paste Output Maker-Pencairan</h2><p class="subcopy">Tempel seluruh output dari Maker. Generator ini akan memeriksa struktur dan menyiapkan teks yang kompatibel dengan parser SIM-SPPG.</p></div></div>
-        <textarea id="makerImportInput" spellcheck="false" placeholder="Contoh: Campakamulya, 19-Nov-2026&#10;OPS HARIAN : Koperasi Arutala - BNI / 1985322260 · 1.200.000"></textarea>
-        <div class="input-tools">
-          <div class="button-row">
-            <button class="btn btn-primary" id="validateMakerBtn" type="button">Periksa Format</button>
-            <button class="btn btn-secondary" id="copyMakerOutputBtn" type="button" disabled>Copy untuk SIM-SPPG</button>
-            <button class="btn btn-secondary" id="clearMakerBtn" type="button">Clear</button>
-          </div>
-        </div>
-        <div class="notice info" id="makerImportNotice" role="status" hidden></div>
-        <div class="maker-import-meta" id="makerImportMeta" hidden></div>
-        <p class="maker-import-note">Catatan opsional pada OPS/GAS tidak dibuat-buat atau diwajibkan. Baris tanpa catatan tetap dipertahankan, nominal tetap harus ada.</p>
-      </div>
     </section>
 
-    <section id="outputGeneratorPanel" aria-labelledby="cardsHeading">
+    <section aria-labelledby="cardsHeading">
       <div class="stats">
         <div>
           <h2 id="cardsHeading">Output Pencairan</h2>
@@ -401,17 +374,6 @@
     const pendingNotice = document.getElementById('pendingNotice');
     const ignoredPanel = document.getElementById('ignoredPanel');
     const ignoredList = document.getElementById('ignoredList');
-    const makerImportNotice = document.getElementById('makerImportNotice');
-    const copyMakerOutputBtn = document.getElementById('copyMakerOutputBtn');
-    const makerImportTab = document.getElementById('makerImportTab');
-    const fieldGeneratorTab = document.getElementById('fieldGeneratorTab');
-    const makerImportPane = document.getElementById('makerImportPane');
-    const fieldGeneratorPane = document.getElementById('fieldGeneratorPane');
-    const makerImportInput = document.getElementById('makerImportInput');
-    const validateMakerBtn = document.getElementById('validateMakerBtn');
-    const clearMakerBtn = document.getElementById('clearMakerBtn');
-    const makerImportMeta = document.getElementById('makerImportMeta');
-    const outputGeneratorPanel = document.getElementById('outputGeneratorPanel');
 
     let decodedSource = '';
     let cards = [];
@@ -425,78 +387,6 @@
     let sourcePending = false;
     let useSpacedDateFormat = false;
     let decodedKitchen = '';
-    let makerImportValidatedText = '';
-    let makerImportMode = false;
-
-    function setWorkflowMode(mode) {
-      makerImportMode = mode === 'maker';
-      fieldGeneratorPane.hidden = makerImportMode;
-      makerImportPane.hidden = !makerImportMode;
-      outputGeneratorPanel.hidden = makerImportMode;
-      fieldGeneratorTab.setAttribute('aria-selected', String(!makerImportMode));
-      makerImportTab.setAttribute('aria-selected', String(makerImportMode));
-      if (!makerImportMode) {
-        sourceInput.focus();
-      } else {
-        makerImportInput.focus();
-      }
-    }
-
-    function validateMakerSource(source) {
-      const text = String(source || '').replace(/\r\n?/g, '\n').trim();
-      if (!text) return { error: 'Tempel output Maker terlebih dahulu.', text: '', kitchen: '', date: '', rows: [] };
-      const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
-      const header = lines[0].match(/^(.+?),\s*(\d{1,2}-(?:Jan|Feb|Mar|Apr|Mei|Jun|Jul|Agu|Sep|Okt|Nov|Des)-\d{4})(?:\s*\(\d+\))?$/i);
-      if (!header) {
-        return { error: 'Header harus berformat NamaDapur, DD-MMM-YYYY.', text, kitchen: '', date: '', rows: [] };
-      }
-      const rows = [];
-      const allowed = /^(RAB(?: B3)?|GAS|OPS HARIAN|INSENTIF FASILITAS SPPG|SEWA SPPG|GAJI RELAWAN|INSENTIF PIC SEKOLAH|INSENTIF PIC POSYANDU|INSENTIF KADER|SEWA KENDARAAN|LAIN-LAIN|INSENTIF SPPG)\s*:/i;
-      for (let index = 1; index < lines.length; index++) {
-        const line = lines[index];
-        const amountDivider = line.lastIndexOf('·');
-        if (amountDivider < 0) {
-          return { error: 'Baris ' + (index + 1) + ' tidak memiliki pemisah nominal (·).', text, kitchen: header[1], date: header[2], rows };
-        }
-        const beforeAmount = line.slice(0, amountDivider).trim();
-        const amountText = line.slice(amountDivider + 1).trim();
-        if (!allowed.test(beforeAmount)) {
-          return { error: 'Kategori transaksi pada baris ' + (index + 1) + ' tidak dikenali.', text, kitchen: header[1], date: header[2], rows };
-        }
-        if (!/^(?:\d+|\d{1,3}(?:\.\d{3})+)$/.test(amountText) || Number(amountText.replace(/\./g, '')) <= 0) {
-          return { error: 'Nominal pada baris ' + (index + 1) + ' tidak valid. Gunakan angka Rupiah dengan pemisah titik.', text, kitchen: header[1], date: header[2], rows };
-        }
-        const label = beforeAmount.slice(0, beforeAmount.indexOf(':')).trim().toUpperCase();
-        const body = beforeAmount.slice(beforeAmount.indexOf(':') + 1).trim();
-        if (!body || !/\s-\s[A-Za-z][A-Za-z0-9 ]*\s*\/\s*[^\s·]+$/.test(body)) {
-          return { error: 'Identitas rekening pada baris ' + (index + 1) + ' tidak valid. Periksa penerima, bank, dan nomor rekening.', text, kitchen: header[1], date: header[2], rows };
-        }
-        if (label === 'OPS HARIAN') {
-          // Details after the account marker are optional by design.
-          rows.push({ line, label, amount: amountText, hasDetails: /\\s·\\s.+$/.test(body) });
-        } else {
-          rows.push({ line, label, amount: amountText, hasDetails: true });
-        }
-      }
-      if (!rows.length) return { error: 'Belum ada baris transaksi dengan nominal.', text, kitchen: header[1], date: header[2], rows };
-      return { error: '', text, kitchen: header[1], date: header[2], rows };
-    }
-
-    function setMakerImportNotice(message, isError) {
-      makerImportNotice.textContent = message;
-      makerImportNotice.hidden = !message;
-      makerImportNotice.classList.toggle('maker-import-error', Boolean(isError));
-    }
-
-    async function copyValidatedMakerOutput() {
-      if (!makerImportValidatedText) return;
-      try {
-        await writeClipboard(makerImportValidatedText);
-        setMakerImportNotice('Format valid. Seluruh baris berhasil disalin untuk ditempel ke SIM-SPPG.', false);
-      } catch (error) {
-        setMakerImportNotice('Gagal menyalin. Periksa izin clipboard browser.', true);
-      }
-    }
 
     function escapeHtml(value) {
       return String(value).replace(/[&<>"']/g, function (ch) {
@@ -1431,40 +1321,6 @@
         setDecodeNotice('Browser gagal menyalin input data. Coba gunakan HTTPS atau salin manual.');
       }
     });
-
-    fieldGeneratorTab.addEventListener('click', function () { setWorkflowMode('field'); });
-    makerImportTab.addEventListener('click', function () { setWorkflowMode('maker'); });
-    validateMakerBtn.addEventListener('click', function () {
-      const result = validateMakerSource(makerImportInput.value);
-      makerImportValidatedText = result.error ? '' : result.text;
-      copyMakerOutputBtn.disabled = !makerImportValidatedText;
-      makerImportMeta.hidden = Boolean(result.error);
-      makerImportMeta.innerHTML = result.error ? '' :
-        '<span class="maker-import-chip">' + escapeHtml(result.kitchen) + '</span>' +
-        '<span class="maker-import-chip">' + escapeHtml(result.date) + '</span>' +
-        '<span class="maker-import-chip">' + result.rows.length + ' transaksi</span>' +
-        '<span class="maker-import-chip">' + result.rows.filter(row => row.label === 'OPS HARIAN' && !row.hasDetails).length + ' OPS tanpa catatan</span>';
-      if (result.error) {
-        setMakerImportNotice(result.error, true);
-      } else {
-        setMakerImportNotice('Format valid. Output Maker siap disalin ke SIM-SPPG.', false);
-      }
-    });
-    clearMakerBtn.addEventListener('click', function () {
-      makerImportInput.value = '';
-      makerImportValidatedText = '';
-      copyMakerOutputBtn.disabled = true;
-      makerImportMeta.hidden = true;
-      setMakerImportNotice('', false);
-      makerImportInput.focus();
-    });
-    makerImportInput.addEventListener('input', function () {
-      makerImportValidatedText = '';
-      copyMakerOutputBtn.disabled = true;
-      makerImportMeta.hidden = true;
-      setMakerImportNotice('Input berubah. Periksa format lagi sebelum menyalin.', false);
-    });
-    copyMakerOutputBtn.addEventListener('click', function () { void copyValidatedMakerOutput(); });
 
     decodeBtn.addEventListener('click', function () {
       try {
