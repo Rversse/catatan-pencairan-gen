@@ -571,8 +571,13 @@
       const segments = values.map(function (item, index) {
         return index === 0 ? 'Pembayaran ' + item : item;
       });
-      const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
+      const dateText = hasUsableDate(date) ? 'Periode ' + formatOutputDate(date) : '';
       return distributeDescriptionFields(dateText ? segments.concat(dateText) : segments);
+    }
+
+    function buildPayrollDescriptionFields(label, date) {
+      const dateText = hasUsableDate(date) ? 'Periode ' + formatOutputDate(date) : '';
+      return distributeDescriptionFields(dateText ? [label, dateText] : [label]);
     }
 
     function extractOtherDescription(rawDescription) {
@@ -741,6 +746,16 @@
 
     // OPS HARIAN notes are free-form descriptions, so normalize only this category.
     // Keep the note readable in sentence case while preserving common terms/brands.
+    function formatGasOpsHarianDetail(value) {
+      const detail = String(value || '').trim().replace(/\s+/g, ' ');
+      const sized = detail.match(/^Gas\s+(12|50)\s*kg\s*\((\d+)\s*(?:tabung|tbg)\)$/i);
+      if (sized) return 'Gas ' + sized[1] + 'kg ' + sized[2] + ' tbg';
+
+      const countOnly = detail.match(/^Gas\s*,?\s*(\d+)\s*(?:tabung|tbg)$/i);
+      if (countOnly) return 'Gas ' + countOnly[1] + ' tbg';
+      return '';
+    }
+
     function formatOpsHarianDetail(value) {
       const normalized = String(value || '')
         .replace(/\s*,\s*/g, ', ')
@@ -818,7 +833,7 @@
           .replace(/^Pembayaran\s+/i, '')
           .replace(/^Ops\s+Harian\b[\s,:-]*/i, '')
           .trim();
-        const descriptionDetail = formatOpsHarianDetail(cleanNote);
+        const descriptionDetail = formatGasOpsHarianDetail(cleanNote) || formatOpsHarianDetail(cleanNote);
         const descriptionLabel = descriptionDetail
           ? 'Pembayaran ' + descriptionDetail
           : 'Pembayaran Ops Harian';
@@ -839,7 +854,7 @@
           category: label,
           title: targetAccount || label,
           isReal: false,
-          descriptions: buildDescriptionFields(label, date)
+          descriptions: buildPayrollDescriptionFields(label, date)
         };
       }
 
@@ -888,7 +903,7 @@
           category: descriptionLabel,
           title: targetAccount || descriptionLabel,
           isReal: false,
-          descriptions: buildDescriptionFields(descriptionLabel, date)
+          descriptions: buildPayrollDescriptionFields(descriptionLabel, date)
         };
       }
 
