@@ -768,22 +768,21 @@
     // Keep the cylinder size/count together in the next description field when
     // the full OPS HARIAN label would exceed the 40-character field limit.
     function buildOpsHarianGasDescriptionFields(detail, date) {
-      const normalized = String(detail || '').trim();
-      const sized = normalized.match(/^Gas\s+((?:12|50)\s*kg)\s+(\(\d+\s+tabung\))$/i);
-      const countOnly = normalized.match(/^Gas\s+(\(\d+\s+tabung\))$/i);
+      const normalized = String(detail || '').replace(/\s+/g, ' ').trim();
+      const sized = normalized.match(/^Gas\s+((?:12|50)\s*kg)\s*\((\d+)\s*(?:tabung|tbg)\)(?:\s*,?\s*(.*))?$/i);
+      const countOnly = normalized.match(/^Gas\s*\((\d+)\s*(?:tabung|tbg)\)(?:\s*,?\s*(.*))?$/i);
       const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
 
-      if (sized) {
-        // Keep the complete size + "(N tabung)" phrase in one field.
-        // If it does not fit after the prefix, move the entire gas detail to
-        // Description 2 instead of splitting the parenthetical quantity.
-        const gasDetail = 'Gas ' + sized[1].replace(/\s+/g, '') + ' ' + sized[2];
-        const secondField = gasDetail + (dateText ? ', ' + dateText : '');
-        return ['Pembayaran Ops Harian', secondField, ''];
-      }
+      if (sized || countOnly) {
+        const sizeText = sized ? sized[1].replace(/\s+/g, '') + ' ' : '';
+        const quantityText = (sized || countOnly)[2] + ' tabung';
+        const gasDetail = 'Gas ' + sizeText + '(' + quantityText + ')';
+        const trailingDetail = String((sized || countOnly)[3] || '').trim().replace(/^,\s*/, '');
+        const detailAndDate = [gasDetail, trailingDetail, dateText].filter(Boolean).join(', ');
 
-      if (countOnly) {
-        return buildDescriptionFields('Pembayaran Ops Harian Gas ' + countOnly[1], date);
+        // Keep "Gas [size] (N tabung)" atomic. Additional notes and date go
+        // to Description 3, so the parenthetical quantity is never split.
+        return ['Pembayaran Ops Harian', gasDetail, [trailingDetail, dateText].filter(Boolean).join(', ')];
       }
 
       return buildDescriptionFields('Pembayaran Ops Harian ' + normalized, date);
@@ -874,12 +873,15 @@
           .replace(/^Pembayaran\s+/i, '')
           .replace(/^Ops\s+Harian\b[\s,:-]*/i, '')
           .trim();
-        const descriptionDetail = formatGasOpsHarianDetail(cleanNote) || formatOpsHarianDetail(cleanNote);
+        const isGasNote = /^Gas(?:\s|$)/i.test(cleanNote);
+        const descriptionDetail = isGasNote
+          ? cleanNote
+          : formatGasOpsHarianDetail(cleanNote) || formatOpsHarianDetail(cleanNote);
         const descriptionLabel = descriptionDetail
           ? 'Pembayaran Ops Harian ' + descriptionDetail
           : 'Pembayaran Ops Harian';
-        const descriptions = !isVirtualAccount && /^Gas(?:\s|$)/i.test(descriptionDetail)
-          ? buildOpsHarianGasDescriptionFields(descriptionDetail, date)
+        const descriptions = !isVirtualAccount && isGasNote
+          ? buildOpsHarianGasDescriptionFields(cleanNote, date)
           : buildDescriptionFields(descriptionLabel, date);
         return {
           category: isVirtualAccount ? 'Virtual Account' : 'OPS HARIAN',
