@@ -771,20 +771,22 @@
       const normalized = String(detail || '').trim();
       const sized = normalized.match(/^Gas\s+((?:12|50)\s*kg)\s+(\(\d+\s+tabung\))$/i);
       const countOnly = normalized.match(/^Gas\s+(\(\d+\s+tabung\))$/i);
-      const gasQuantity = sized
-        ? sized[1].replace(/\s+/g, '') + ' ' + sized[2]
-        : countOnly
-          ? countOnly[1]
-          : '';
+      const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
 
-      if (!gasQuantity) {
-        return buildDescriptionFields('Pembayaran Ops Harian ' + normalized, date);
+      if (sized) {
+        // The complete phrase is 41 characters, so keep the cylinder quantity
+        // together in Description 2 rather than cutting the parentheses at 40.
+        return distributeDescriptionFields(
+          ['Pembayaran Ops Harian Gas', sized[1].replace(/\s+/g, '') + ' ' + sized[2]]
+            .concat(dateText ? [dateText] : [])
+        );
       }
 
-      const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
-      return distributeDescriptionFields(
-        ['Pembayaran Ops Harian Gas', gasQuantity].concat(dateText ? [dateText] : [])
-      );
+      if (countOnly) {
+        return buildDescriptionFields('Pembayaran Ops Harian Gas ' + countOnly[1], date);
+      }
+
+      return buildDescriptionFields('Pembayaran Ops Harian ' + normalized, date);
     }
 
     function formatOpsHarianDetail(value) {
