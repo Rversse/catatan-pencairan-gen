@@ -171,6 +171,7 @@
     .card-account-number { color:#3449c5; overflow-wrap:anywhere; }
     .kind-pill { display:none !important; }
     .fields { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:10px; }
+    .payment-card.is-virtual-account .fields { grid-template-columns:repeat(2,minmax(0,1fr)); }
     .field-group { min-width:0; }
     .field-label {
       display:flex; align-items:center; gap:4px; margin-bottom:4px;
@@ -657,21 +658,29 @@
       return rawBank.replace(/^BANK\s+/, '');
     }
 
-    function extractBankName(rawDescription) {
+    function extractBankAccountParts(rawDescription) {
       const firstSegment = String(rawDescription || '').split(' · ')[0].trim();
-      const slashIndex = firstSegment.lastIndexOf(' / ');
-      if (slashIndex < 0) return '';
-      const bankSeparatorIndex = firstSegment.lastIndexOf(' - ', slashIndex);
-      if (bankSeparatorIndex < 0) return '';
-      const bankText = firstSegment.slice(bankSeparatorIndex + 3, slashIndex).trim();
-      return normalizeBankName(bankText);
+      const colonIndex = firstSegment.indexOf(':');
+      const targetText = colonIndex >= 0
+        ? firstSegment.slice(colonIndex + 1).trim()
+        : firstSegment;
+      const match = targetText.match(/^(?:.*\s-\s)?([A-Z][A-Z0-9 ]*)\s*\/\s*([^\s]+)$/i);
+      if (!match) return null;
+      return {
+        bank: normalizeBankName(match[1]),
+        accountNumber: match[2].trim()
+      };
+    }
+
+    function extractBankName(rawDescription) {
+      const account = extractBankAccountParts(rawDescription);
+      return account ? account.bank : '';
     }
 
     // Keep destination identifiers as strings so leading zeroes are preserved.
     function extractAccountNumber(rawDescription) {
-      const firstSegment = String(rawDescription || '').split(' · ')[0].trim();
-      const match = firstSegment.match(/\s-\s[A-Z][A-Z0-9 ]*\s\/\s([^\s]+)\s*$/i);
-      return match ? match[1].trim() : '';
+      const account = extractBankAccountParts(rawDescription);
+      return account ? account.accountNumber : '';
     }
 
     function getPrimaryBank(kitchen) {
@@ -770,6 +779,19 @@
         .replace(/\bAqua\b/gi, 'Aqua');
     }
 
+    function extractOpsHarianNote(rawDescription) {
+      const source = String(rawDescription || '').trim();
+      const colonIndex = source.indexOf(':');
+      if (colonIndex < 0) return '';
+
+      const parts = source.slice(colonIndex + 1).split(' · ').map(function (part) {
+        return part.trim();
+      });
+      const accountSegment = parts.shift() || '';
+      if (!extractBankAccountParts('OPS HARIAN : ' + accountSegment)) return '';
+      return parts.filter(Boolean).join(' · ');
+    }
+
     function describeTransaction(rawDescription, kitchen, date) {
       const source = String(rawDescription || '').trim();
       const targetAccount = parseTargetAccount(source, kitchen);
@@ -816,17 +838,12 @@
       }
 
       if (/^OPS HARIAN\s*:/i.test(source)) {
-        // Maker emits the same OPS HARIAN prefix for both default and custom
-        // operational entries. Custom entries append their editable Catatan:
-        // "OPS HARIAN : Name - BANK / account · Note".
-        // parseOutput removes the final amount before this function runs.
-        const accountAndNote = source.match(/^OPS HARIAN\s*:\s*.*?\s-\s[A-Z][A-Z0-9 ]*\s\/\s[^\s·]+(?:\s·\s([\s\S]*))?$/i);
-        const note = accountAndNote ? String(accountAndNote[1] || '').trim() : '';
+        // Supports both named recipients and ownerless Virtual Account destinations.
+        const note = extractOpsHarianNote(source);
         const isVirtualAccount = /(?:^|[ ·])VA(?:$|[ ·])/i.test(source);
         const isArutalaNeutral = /^Koperasi Arutala\s-\sBNI\s\/\s1985322260$/i.test(targetAccount);
-        // VA is a card-level payment marker, not part of the autofill description.
-        // Remove it as a complete segment so no stray separator remains.
-        const cleanNote = note.split(' · ')
+        const cleanNote = note
+          .split(' · ')
           .map(function (part) { return part.trim(); })
           .filter(function (part) { return part && !/^VA$/i.test(part); })
           .join(' · ')
@@ -967,12 +984,17 @@
         const details = describeTransaction(rawDescription, kitchen, date);
         const cardId = 'line-' + (index + 1);
         const edit = edits[cardId] || {};
-        const descriptions = Array.isArray(edit.descriptions)
-          ? [edit.descriptions[0] || '', edit.descriptions[1] || '', edit.descriptions[2] || '']
-          : details.descriptions.slice(0, 3);
+        const descriptions = isVirtualAccount
+          ? ['', '', '']
+          : Array.isArray(edit.descriptions)
+            ? [edit.descriptions[0] || '', edit.descriptions[1] || '', edit.descriptions[2] || '']
+            : details.descriptions.slice(0, 3);
 
         const bank = extractBankName(rawDescription);
-        const accountNumber = extractAccountNumber(rawDescription);
+        const parsedAccountNumber = extractAccountNumber(rawDescription);
+        const accountNumber = Object.prototype.hasOwnProperty.call(edit, 'accountNumber')
+          ? String(edit.accountNumber || '')
+          : parsedAccountNumber;
         const primaryBank = getPrimaryBank(kitchen);
         parsedCards.push({
           id: cardId,
@@ -1031,11 +1053,13 @@
 
     function getCardFieldValue(card, fieldKey) {
       if (fieldKey === 'amount') return digitsOnly(card.amount);
+      if (fieldKey === 'account-number') return String(card.accountNumber || '');
       const descriptionIndex = Number(String(fieldKey).replace('description-', ''));
       return String(card.descriptions[descriptionIndex] || '');
     }
 
     function getRequiredFieldKeys(card) {
+      if (card.isVirtualAccount) return ['amount', 'account-number'];
       return REQUIRED_FIELD_KEYS.filter(function (fieldKey) {
         return getCardFieldValue(card, fieldKey).trim() !== '';
       });
@@ -1095,7 +1119,7 @@
         return '<li>Baris ' + item.lineNo + ': ' + escapeHtml(item.text) + ' — ' + escapeHtml(item.reason) + '</li>';
       }).join('');
       pendingNotice.hidden = !sourcePending;
-      cardsEl.querySelectorAll('input[data-role="description"], input[data-role="amount"]').forEach(function (element) {
+      cardsEl.querySelectorAll('input[data-role="description"], input[data-role="amount"], input[data-role="account-number"]').forEach(function (element) {
         element.disabled = sourcePending;
       });
       copyInputBtn.disabled = !decodedSource || sourcePending || cards.length === 0;
@@ -1108,7 +1132,7 @@
         const statusLabel = done
           ? 'Pencairan Selesai'
           : copiedCount + '/' + getRequiredFieldKeys(card).length + ' field tersalin';
-        const descriptionFields = card.descriptions.map(function (value, descriptionIndex) {
+        const descriptionFields = card.isVirtualAccount ? '' : card.descriptions.map(function (value, descriptionIndex) {
           const fieldId = 'desc-' + card.id + '-' + descriptionIndex;
           const charCount = String(value || '').length;
           return '<div class="field-group">' +
@@ -1130,20 +1154,29 @@
               '<span class="copy-tooltip" aria-live="polite">Copied</span>' +
             '</div>' +
           '</div>';
+        const accountNumberField = card.isVirtualAccount
+          ? '<div class="field-group">' +
+              '<label class="field-label" for="va-' + escapeHtml(card.id) + '">Nomor VA</label>' +
+              '<div class="field-entry">' +
+                '<input class="description-input" id="va-' + escapeHtml(card.id) + '" data-role="account-number" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" value="' + escapeHtml(card.accountNumber || '') + '" placeholder="Nomor VA tidak terbaca">' +
+                '<span class="copy-tooltip" aria-live="polite">Copied</span>' +
+              '</div>' +
+            '</div>'
+          : '';
 
         return '<article class="payment-card' + (done ? ' is-done' : '') + (card.isVirtualAccount ? ' is-virtual-account' : '') + (!card.isVirtualAccount && card.isSecondaryBank ? ' is-secondary-bank' : '') + (card.id === latestCopiedCardId ? ' is-latest-copy' : '') + '" style="--card-index:' + index + '" data-card-id="' + escapeHtml(card.id) + '">' +
           '<div class="card-top">' +
             '<div class="number">' + String(index + 1).padStart(2, '0') + '</div>' +
             '<div class="card-head">' +
               '<div class="card-name-row"><span class="card-category" title="' + escapeHtml(card.title || card.category) + '">' + escapeHtml(card.title || card.category) + '</span></div>' +
-              (card.isVirtualAccount && card.accountNumber
-                ? '<div class="card-account-context"><span class="card-bank">' + escapeHtml(card.bank || 'BANK TIDAK DIKENALI') + '</span><span aria-hidden="true">·</span><span class="card-account-number">' + escapeHtml(card.accountNumber) + '</span></div>'
+              (card.isVirtualAccount && card.bank
+                ? '<div class="card-account-context"><span class="card-bank">' + escapeHtml(card.bank) + '</span></div>'
                 : '') +
               '<div class="card-context">' + escapeHtml(card.kitchen) + ' <span aria-hidden="true">·</span> ' + escapeHtml(formatOutputDate(card.date)) + '</div>' +
             '</div>' +
             '<span class="status-dot" aria-label="' + escapeHtml(statusLabel) + '" title="' + escapeHtml(statusLabel) + '"></span>' +
           '</div>' +
-          '<div class="fields">' + amountField + descriptionFields + '</div>' +
+          '<div class="fields">' + amountField + (card.isVirtualAccount ? accountNumberField : descriptionFields) + '</div>' +
           (card.isReal ? '<div class="real-note">Catatan realisasi operasional — bukan instruksi transfer rekening. Nominal tetap bisa disalin tanpa titik.</div>' : '') +
         '</article>';
       }).join('');
@@ -1278,7 +1311,7 @@
           date: formatDateInText(card.date),
           descriptions: card.descriptions.map(formatDateInText)
         };
-        edits[card.id] = { descriptions: updated.descriptions.slice(), amount: updated.amount };
+        edits[card.id] = { descriptions: updated.descriptions.slice(), amount: updated.amount, accountNumber: updated.accountNumber };
         return updated;
       });
       // Keep copied values aligned with reformatted text so progress is preserved.
@@ -1407,11 +1440,15 @@
         fieldKey = 'description-' + descriptionIndex;
         const count = target.closest('.field-group')?.querySelector('.description-count');
         if (count) count.textContent = target.value.length + '/40';
-        edits[card.id] = { descriptions: card.descriptions.slice(), amount: card.amount };
+        edits[card.id] = { descriptions: card.descriptions.slice(), amount: card.amount, accountNumber: card.accountNumber };
       } else if (target.dataset.role === 'amount') {
         card.amount = digitsOnly(target.value);
         fieldKey = 'amount';
-        edits[card.id] = { descriptions: card.descriptions.slice(), amount: card.amount };
+        edits[card.id] = { descriptions: card.descriptions.slice(), amount: card.amount, accountNumber: card.accountNumber };
+      } else if (target.dataset.role === 'account-number') {
+        card.accountNumber = target.value;
+        fieldKey = 'account-number';
+        edits[card.id] = { descriptions: card.descriptions.slice(), amount: card.amount, accountNumber: card.accountNumber };
       }
       const copied = copiedFieldsByCard[card.id];
       if (fieldKey && copied && Object.prototype.hasOwnProperty.call(copied, fieldKey) &&
@@ -1433,14 +1470,14 @@
 
       card.amount = digitsOnly(target.value);
       target.value = formatAmount(card.amount);
-      edits[card.id] = { descriptions: card.descriptions.slice(), amount: card.amount };
+      edits[card.id] = { descriptions: card.descriptions.slice(), amount: card.amount, accountNumber: card.accountNumber };
       refreshCardStatus(card, cardEl);
       updateProgress();
       persistWorkspace();
     });
 
     cardsEl.addEventListener('click', function (event) {
-      const field = event.target.closest('input[data-role="description"], input[data-role="amount"]');
+      const field = event.target.closest('input[data-role="description"], input[data-role="amount"], input[data-role="account-number"]');
       if (!field) return;
       const cardEl = field.closest('[data-card-id]');
       if (!cardEl || !cards.some(function (item) { return item.id === cardEl.dataset.cardId; })) return;
@@ -1453,6 +1490,8 @@
         void copyToClipboard(field.value, field, card, fieldKey, cardEl);
       } else if (field.dataset.role === 'amount') {
         void copyToClipboard(digitsOnly(field.value), field, card, 'amount', cardEl);
+      } else if (field.dataset.role === 'account-number') {
+        void copyToClipboard(field.value, field, card, 'account-number', cardEl);
       }
     });
 
