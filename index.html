@@ -774,12 +774,12 @@
       const dateText = hasUsableDate(date) ? formatOutputDate(date) : '';
 
       if (sized) {
-        // The complete phrase is 41 characters, so keep the cylinder quantity
-        // together in Description 2 rather than cutting the parentheses at 40.
-        return distributeDescriptionFields(
-          ['Pembayaran Ops Harian', 'Gas ' + sized[1].replace(/\s+/g, '') + ' ' + sized[2]]
-            .concat(dateText ? [dateText] : [])
-        );
+        // Keep the complete size + "(N tabung)" phrase in one field.
+        // If it does not fit after the prefix, move the entire gas detail to
+        // Description 2 instead of splitting the parenthetical quantity.
+        const gasDetail = 'Gas ' + sized[1].replace(/\s+/g, '') + ' ' + sized[2];
+        const secondField = gasDetail + (dateText ? ', ' + dateText : '');
+        return ['Pembayaran Ops Harian', secondField, ''];
       }
 
       if (countOnly) {
