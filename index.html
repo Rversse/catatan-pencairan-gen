@@ -778,11 +778,16 @@
         const quantityText = (sized || countOnly)[2] + ' tabung';
         const gasDetail = 'Gas ' + sizeText + '(' + quantityText + ')';
         const trailingDetail = String((sized || countOnly)[3] || '').trim().replace(/^,\s*/, '');
-        const detailAndDate = [gasDetail, trailingDetail, dateText].filter(Boolean).join(', ');
+        const trailingAndDate = [trailingDetail, dateText].filter(Boolean).join(', ');
+        const trailingChunks = splitTextAtLimit(trailingAndDate, MAX_DESCRIPTION_LENGTH);
+        const thirdField = trailingChunks[0] || '';
+        if (trailingChunks.length > 1) {
+          descriptionOverflowWarnings.push('Catatan tambahan GAS melebihi kapasitas Deskripsi 3 (maksimal 40 karakter). Periksa sumber transaksi.');
+        }
 
         // Keep "Gas [size] (N tabung)" atomic. Additional notes and date go
-        // to Description 3, so the parenthetical quantity is never split.
-        return ['Pembayaran Ops Harian', gasDetail, [trailingDetail, dateText].filter(Boolean).join(', ')];
+        // to Description 3, which remains capped at 40 characters.
+        return ['Pembayaran Ops Harian', gasDetail, thirdField];
       }
 
       return buildDescriptionFields('Pembayaran Ops Harian ' + normalized, date);
