@@ -778,16 +778,46 @@
         const quantityText = (sized || countOnly)[2] + ' tabung';
         const gasDetail = 'Gas ' + sizeText + '(' + quantityText + ')';
         const trailingDetail = String((sized || countOnly)[3] || '').trim().replace(/^,\s*/, '');
-        const trailingAndDate = [trailingDetail, dateText].filter(Boolean).join(', ');
-        const trailingChunks = splitTextAtLimit(trailingAndDate, MAX_DESCRIPTION_LENGTH);
-        const thirdField = trailingChunks[0] || '';
-        if (trailingChunks.length > 1) {
+        const detailParts = trailingDetail
+          ? trailingDetail.split(/\s*,\s*/).map(function (part) { return part.trim(); }).filter(Boolean)
+          : [];
+        if (dateText) detailParts.push(dateText);
+
+        // Keep the gas size + "(N tabung)" together in Description 2.
+        // Then fill the remaining 40-character space with following details;
+        // anything that does not fit continues in Description 3.
+        let secondField = gasDetail;
+        let thirdField = '';
+        let overflow = false;
+
+        detailParts.forEach(function (part) {
+          const candidateSecond = secondField ? secondField + ', ' + part : part;
+          if (!thirdField && candidateSecond.length <= MAX_DESCRIPTION_LENGTH) {
+            secondField = candidateSecond;
+            return;
+          }
+
+          const candidateThird = thirdField ? thirdField + ', ' + part : part;
+          if (candidateThird.length <= MAX_DESCRIPTION_LENGTH) {
+            thirdField = candidateThird;
+            return;
+          }
+
+          const remaining = MAX_DESCRIPTION_LENGTH - (thirdField ? thirdField.length + 2 : 0);
+          if (remaining > 0) {
+            const words = splitTextAtLimit(part, remaining);
+            if (words.length) {
+              thirdField = thirdField ? thirdField + ', ' + words[0] : words[0];
+            }
+          }
+          overflow = true;
+        });
+
+        if (overflow) {
           descriptionOverflowWarnings.push('Catatan tambahan GAS melebihi kapasitas Deskripsi 3 (maksimal 40 karakter). Periksa sumber transaksi.');
         }
 
-        // Keep "Gas [size] (N tabung)" atomic. Additional notes and date go
-        // to Description 3, which remains capped at 40 characters.
-        return ['Pembayaran Ops Harian', gasDetail, thirdField];
+        return ['Pembayaran Ops Harian', secondField, thirdField];
       }
 
       return buildDescriptionFields('Pembayaran Ops Harian ' + normalized, date);
