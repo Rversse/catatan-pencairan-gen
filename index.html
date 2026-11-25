@@ -777,7 +777,7 @@
         // The complete phrase is 41 characters, so keep the cylinder quantity
         // together in Description 2 rather than cutting the parentheses at 40.
         return distributeDescriptionFields(
-          ['Pembayaran Ops Harian Gas', sized[1].replace(/\s+/g, '') + ' ' + sized[2]]
+          ['Pembayaran Ops Harian', 'Gas ' + sized[1].replace(/\s+/g, '') + ' ' + sized[2]]
             .concat(dateText ? [dateText] : [])
         );
       }
