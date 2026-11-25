@@ -741,7 +741,7 @@
 
     function buildGasDescriptionFields(products, date) {
       const items = (products || []).map(function (item) { return String(item || '').trim(); }).filter(Boolean);
-      let label = 'Pembayaran Gas';
+      let label = 'Pembayaran Ops Harian Gas';
 
       // Avoid repeating the word "Gas" when the Maker detail already starts with it.
       if (items.length && /^Gas(?:\s|$)/i.test(items[0])) {
@@ -852,7 +852,7 @@
           .trim();
         const descriptionDetail = formatGasOpsHarianDetail(cleanNote) || formatOpsHarianDetail(cleanNote);
         const descriptionLabel = descriptionDetail
-          ? 'Pembayaran ' + descriptionDetail
+          ? 'Pembayaran Ops Harian ' + descriptionDetail
           : 'Pembayaran Ops Harian';
         return {
           category: isVirtualAccount ? 'Virtual Account' : 'OPS HARIAN',
